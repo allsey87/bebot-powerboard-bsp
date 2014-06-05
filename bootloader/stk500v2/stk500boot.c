@@ -112,13 +112,9 @@ LICENSE:
 #include	<stdlib.h>
 #include	"command.h"
 
+#define ENABLE_MONITOR
 
-#if defined(_MEGA_BOARD_) || defined(_BOARD_AMBER128_) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) \
-	|| defined(__AVR_ATmega2561__) || defined(__AVR_ATmega1284P__) || defined(ENABLE_MONITOR)
-	#undef		ENABLE_MONITOR
-	#define		ENABLE_MONITOR
-	static void	RunMonitor(void);
-#endif
+static void	RunMonitor(void);
 
 #ifndef EEWE
 	#define EEWE    1
@@ -127,114 +123,26 @@ LICENSE:
 	#define EEMWE   2
 #endif
 
-//#define	_DEBUG_SERIAL_
-//#define	_DEBUG_WITH_LEDS_
-
-
-/*
- * Uncomment the following lines to save code space
- */
-//#define	REMOVE_PROGRAM_LOCK_BIT_SUPPORT		// disable program lock bits
-//#define	REMOVE_BOOTLOADER_LED				// no LED to show active bootloader
-//#define	REMOVE_CMD_SPI_MULTI				// disable processing of SPI_MULTI commands, Remark this line for AVRDUDE <Worapoht>
-//
-
-
-
 //************************************************************************
 //*	LED on pin "PROGLED_PIN" on port "PROGLED_PORT"
 //*	indicates that bootloader is active
 //*	PG2 -> LED on Wiring board
 //************************************************************************
-#define		BLINK_LED_WHILE_WAITING
+#define BLINK_LED_WHILE_WAITING
 
-#ifdef _MEGA_BOARD_
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB7
-#elif defined( _BOARD_AMBER128_ )
-	//*	this is for the amber 128 http://www.soc-robotics.com/
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTD
-	#define PROGLED_DDR		DDRD
-	#define PROGLED_PIN		PINE7
-#elif defined( _CEREBOTPLUS_BOARD_ ) || defined(_CEREBOT_II_BOARD_)
-	//*	this is for the Cerebot 2560 board and the Cerebot-ii
-	//*	onbarod leds are on PORTE4-7
-	#define PROGLED_PORT	PORTE
-	#define PROGLED_DDR		DDRE
-	#define PROGLED_PIN		PINE7
-#elif defined( _PENGUINO_ )
-	//*	this is for the Penguino
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTC
-	#define PROGLED_DDR		DDRC
-	#define PROGLED_PIN		PINC6
-#elif defined( _ANDROID_2561_ ) || defined( __AVR_ATmega2561__ )
-	//*	this is for the Boston Android 2561
-	//*	onbarod led is PORTE4
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA3
-#elif defined( _BOARD_MEGA16 )
-	//*	onbarod led is PORTA7
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA7
-	#define UART_BAUDRATE_DOUBLE_SPEED 0
-
-#elif defined( _BOARD_BAHBOT_ )
-	//*	dosent have an onboard LED but this is what will probably be added to this port
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB0
-
-#elif defined( _BOARD_ROBOTX_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB6
-#elif defined( _BOARD_CUSTOM1284_BLINK_B0_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB0
-#elif defined( _BOARD_CUSTOM1284_ )
-	#define PROGLED_PORT	PORTD
-	#define PROGLED_DDR		DDRD
-	#define PROGLED_PIN		PIND5
-#elif defined( _AVRLIP_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB5
-#elif defined( _BOARD_STK500_ )
-	#define PROGLED_PORT	PORTA
-	#define PROGLED_DDR		DDRA
-	#define PROGLED_PIN		PINA7
-#elif defined( _BOARD_STK502_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB5
-#elif defined( _BOARD_STK525_ )
-	#define PROGLED_PORT	PORTB
-	#define PROGLED_DDR		DDRB
-	#define PROGLED_PIN		PINB7
-#else
-	#define PROGLED_PORT	PORTD
-	#define PROGLED_DDR		DDRD
-	#define PROGLED_PIN		PIND7
-#endif
+#define PROGLED_PORT		PORTD
+#define PROGLED_DDR		DDRD
+#define PROGLED_PIN		PIND7
 
 /*
  * define CPU frequency in Mhz here if not defined in Makefile
  */
-#ifndef F_CPU
-	#define F_CPU 16000000UL
-#endif
-
+#define F_CPU 8000000UL
 #define	_BLINK_LOOP_COUNT_	(F_CPU / 2250)
+
 /*
  * UART Baudrate, AVRStudio AVRISP only accepts 115200 bps
  */
-
 #ifndef BAUDRATE
 	#define BAUDRATE 115200
 #endif
@@ -263,116 +171,24 @@ LICENSE:
  * Calculate the address where the bootloader starts from FLASHEND and BOOTSIZE
  * (adjust BOOTSIZE below and BOOTLOADER_ADDRESS in Makefile if you want to change the size of the bootloader)
  */
-//#define BOOTSIZE 1024
-#if FLASHEND > 0x0F000
-	#define BOOTSIZE 8192
-#else
-	#define BOOTSIZE 2048
-#endif
-
+#define BOOTSIZE 8192
 #define APP_END  (FLASHEND -(2*BOOTSIZE) + 1)
 
 /*
  * Signature bytes are not available in avr-gcc io_xxx.h
  */
-#if defined (__AVR_ATmega8__)
-	#define SIGNATURE_BYTES 0x1E9307
-#elif defined (__AVR_ATmega16__)
-	#define SIGNATURE_BYTES 0x1E9403
-#elif defined (__AVR_ATmega32__)
-	#define SIGNATURE_BYTES 0x1E9502
-#elif defined (__AVR_ATmega8515__)
-	#define SIGNATURE_BYTES 0x1E9306
-#elif defined (__AVR_ATmega8535__)
-	#define SIGNATURE_BYTES 0x1E9308
-#elif defined (__AVR_ATmega162__)
-	#define SIGNATURE_BYTES 0x1E9404
-#elif defined (__AVR_ATmega128__)
-	#define SIGNATURE_BYTES 0x1E9702
-#elif defined (__AVR_ATmega1280__)
-	#define SIGNATURE_BYTES 0x1E9703
-#elif defined (__AVR_ATmega2560__)
-	#define SIGNATURE_BYTES 0x1E9801
-#elif defined (__AVR_ATmega2561__)
-	#define SIGNATURE_BYTES 0x1e9802
-#elif defined (__AVR_ATmega1284P__)
-	#define SIGNATURE_BYTES 0x1e9705
-#elif defined (__AVR_ATmega640__)
-	#define SIGNATURE_BYTES  0x1e9608
-#elif defined (__AVR_ATmega64__)
-	#define SIGNATURE_BYTES  0x1E9602
-#elif defined (__AVR_ATmega169__)
-	#define SIGNATURE_BYTES  0x1e9405
-#elif defined (__AVR_AT90USB1287__)
-	#define SIGNATURE_BYTES  0x1e9782
-#else
-	#error "no signature definition for MCU available"
-#endif
+#define SIGNATURE_BYTES 0x1E9801
 
-
-#if defined(_BOARD_ROBOTX_) || defined(__AVR_AT90USB1287__) || defined(__AVR_AT90USB1286__)
-	#define	UART_BAUD_RATE_LOW			UBRR1L
-	#define	UART_STATUS_REG				UCSR1A
-	#define	UART_CONTROL_REG			UCSR1B
-	#define	UART_ENABLE_TRANSMITTER		TXEN1
-	#define	UART_ENABLE_RECEIVER		RXEN1
-	#define	UART_TRANSMIT_COMPLETE		TXC1
-	#define	UART_RECEIVE_COMPLETE		RXC1
-	#define	UART_DATA_REG				UDR1
-	#define	UART_DOUBLE_SPEED			U2X1
-
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__) \
-	|| defined(__AVR_ATmega8515__) || defined(__AVR_ATmega8535__)
-	/* ATMega8 with one USART */
-	#define	UART_BAUD_RATE_LOW			UBRRL
-	#define	UART_STATUS_REG				UCSRA
-	#define	UART_CONTROL_REG			UCSRB
-	#define	UART_ENABLE_TRANSMITTER		TXEN
-	#define	UART_ENABLE_RECEIVER		RXEN
-	#define	UART_TRANSMIT_COMPLETE		TXC
-	#define	UART_RECEIVE_COMPLETE		RXC
-	#define	UART_DATA_REG				UDR
-	#define	UART_DOUBLE_SPEED			U2X
-
-#elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__) || defined(__AVR_ATmega162__) \
-	 || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
-	/* ATMega with two USART, use UART0 */
-	#define	UART_BAUD_RATE_LOW			UBRR0L
-	#define	UART_STATUS_REG				UCSR0A
-	#define	UART_CONTROL_REG			UCSR0B
-	#define	UART_ENABLE_TRANSMITTER		TXEN0
-	#define	UART_ENABLE_RECEIVER		RXEN0
-	#define	UART_TRANSMIT_COMPLETE		TXC0
-	#define	UART_RECEIVE_COMPLETE		RXC0
-	#define	UART_DATA_REG				UDR0
-	#define	UART_DOUBLE_SPEED			U2X0
-#elif defined(UBRR0L) && defined(UCSR0A) && defined(TXEN0)
-	/* ATMega with two USART, use UART0 */
-	#define	UART_BAUD_RATE_LOW			UBRR0L
-	#define	UART_STATUS_REG				UCSR0A
-	#define	UART_CONTROL_REG			UCSR0B
-	#define	UART_ENABLE_TRANSMITTER		TXEN0
-	#define	UART_ENABLE_RECEIVER		RXEN0
-	#define	UART_TRANSMIT_COMPLETE		TXC0
-	#define	UART_RECEIVE_COMPLETE		RXC0
-	#define	UART_DATA_REG				UDR0
-	#define	UART_DOUBLE_SPEED			U2X0
-#elif defined(UBRRL) && defined(UCSRA) && defined(UCSRB) && defined(TXEN) && defined(RXEN)
-	//* catch all
-	#define	UART_BAUD_RATE_LOW			UBRRL
-	#define	UART_STATUS_REG				UCSRA
-	#define	UART_CONTROL_REG			UCSRB
-	#define	UART_ENABLE_TRANSMITTER		TXEN
-	#define	UART_ENABLE_RECEIVER		RXEN
-	#define	UART_TRANSMIT_COMPLETE		TXC
-	#define	UART_RECEIVE_COMPLETE		RXC
-	#define	UART_DATA_REG				UDR
-	#define	UART_DOUBLE_SPEED			U2X
-#else
-	#error "no UART definition for MCU available"
-#endif
-
-
+/* UART definition */
+#define	UART_BAUD_RATE_LOW		UBRR0L
+#define	UART_STATUS_REG			UCSR0A
+#define	UART_CONTROL_REG			UCSR0B
+#define	UART_ENABLE_TRANSMITTER	TXEN0
+#define	UART_ENABLE_RECEIVER		RXEN0
+#define	UART_TRANSMIT_COMPLETE	TXC0
+#define	UART_RECEIVE_COMPLETE	RXC0
+#define	UART_DATA_REG				UDR0
+#define	UART_DOUBLE_SPEED			U2X0
 
 /*
  * Macro to calculate UBBR from XTAL and baudrate
@@ -387,16 +203,15 @@ LICENSE:
 	#define UART_BAUD_SELECT(baudRate,xtalCpu) (((float)(xtalCpu))/(((float)(baudRate))*16.0)-1.0+0.5)
 #endif
 
-
 /*
  * States used in the receive state machine
  */
-#define	ST_START		0
+#define	ST_START			0
 #define	ST_GET_SEQ_NUM	1
-#define ST_MSG_SIZE_1	2
-#define ST_MSG_SIZE_2	3
-#define ST_GET_TOKEN	4
-#define ST_GET_DATA		5
+#define	ST_MSG_SIZE_1	2
+#define	ST_MSG_SIZE_2	3
+#define	ST_GET_TOKEN	4
+#define	ST_GET_DATA		5
 #define	ST_GET_CHECK	6
 #define	ST_PROCESS		7
 
@@ -1171,10 +986,6 @@ int main(void)
 			"clr	r31		\n\t"
 			"ijmp	\n\t"
 			);
-//	asm volatile ( "push r1" "\n\t"		// Jump to Reset vector in Application Section
-//					"push r1" "\n\t"
-//					"ret"	 "\n\t"
-//					::);
 
 	 /*
 	 * Never return to stop GCC to generate exit return code
@@ -1184,23 +995,6 @@ int main(void)
 	for(;;);
 }
 
-/*
-base address = f800
-
-avrdude: Device signature = 0x1e9703
-avrdude: safemode: lfuse reads as FF
-avrdude: safemode: hfuse reads as DA
-avrdude: safemode: efuse reads as F5
-avrdude>
-
-
-base address = f000
-avrdude: Device signature = 0x1e9703
-avrdude: safemode: lfuse reads as FF
-avrdude: safemode: hfuse reads as D8
-avrdude: safemode: efuse reads as F5
-avrdude>
-*/
 
 //************************************************************************
 #ifdef ENABLE_MONITOR
@@ -1553,7 +1347,7 @@ int		errorCount;
 	PrintNewLine();
 	ii			=	0;
 #if (FLASHEND > 0x10000)
-	while (((theChar = pgm_read_byte_far(((uint16_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
+	while (((theChar = pgm_read_byte_far(((uint32_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
 #else
 	while (((theChar = pgm_read_byte_near(((uint16_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
 #endif
@@ -1578,7 +1372,7 @@ int		errorCount;
 	errorCount	=	0;
 	ii			=	0;
 #if (FLASHEND > 0x10000)
-	while (((theChar = pgm_read_byte_far((uint16_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
+	while (((theChar = pgm_read_byte_far((uint32_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
 #else
 	while (((theChar = pgm_read_byte_near((uint16_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
 #endif
