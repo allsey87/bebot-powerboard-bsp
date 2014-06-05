@@ -39,6 +39,13 @@ TOOLCHAIN = ../../toolchain/install
 # MCU name
 MCU = atmega2560
 
+# Processor frequency.
+#     This will define a symbol, F_CPU, in all source code files equal to the 
+#     processor frequency. You can then use this symbol in your source code to 
+#     calculate timings. Do NOT tack on a 'UL' at the end, this will be done
+#     automatically to create a 32-bit value in your source code.
+F_CPU = 8000000
+
 # Bootloader
 # Please adjust if using a different AVR
 # 0x1F000*2=0x3E000 for ATmega2560
@@ -95,6 +102,7 @@ CSTANDARD = -std=gnu99
 #    -adhlns...: create assembler listing
 CFLAGS = -g$(DEBUG)
 CFLAGS += -O$(OPT)
+CFLAGS += -DF_CPU=$(F_CPU)UL
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -fno-jump-tables
 CFLAGS += -Wall -Wstrict-prototypes
 CFLAGS += -Wa,-adhlns=$(<:.c=.lst)
@@ -133,8 +141,10 @@ SCANF_LIB =
 #SCANF_LIB = $(SCANF_LIB_MIN)
 #SCANF_LIB = $(SCANF_LIB_FLOAT)
 
+# Maths Library
 MATH_LIB = -lm
 
+# C Library
 C_LIB = -Wl,-L$(TOOLCHAIN)/avrlibc/avr/lib/avr6
 
 #---------------- External Memory Options ----------------
@@ -204,6 +214,9 @@ GENDEPFLAGS = -MD -MP -MF .dep/$(@F).d
 ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
 ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
+# Default target.
+all: begin gccversion build sizeafter end
+
 # Begin and end targets
 begin:
 	@echo
@@ -212,9 +225,6 @@ begin:
 end:
 	@echo $(MSG_END)
 	@echo
-
-# Default target.
-all: begin gccversion build sizeafter end
 
 build: elf hex eep lss sym
 #build:  hex eep lss sym

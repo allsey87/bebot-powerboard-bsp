@@ -106,7 +106,12 @@ LICENSE:
 #include	<avr/interrupt.h>
 #include	<avr/boot.h>
 #include	<avr/pgmspace.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #include	<util/delay.h>
+#pragma GCC diagnostic pop
+
 #include	<avr/eeprom.h>
 #include	<avr/common.h>
 #include	<stdlib.h>
@@ -135,9 +140,12 @@ static void	RunMonitor(void);
 #define PROGLED_PIN		PIND7
 
 /*
- * define CPU frequency in Mhz here if not defined in Makefile
+ * Check if CPU frequency was defined
  */
-#define F_CPU 8000000UL
+#ifndef F_CPU
+	#error "CPU Frequency not defined in Makefile"
+#endif
+ 
 #define	_BLINK_LOOP_COUNT_	(F_CPU / 2250)
 
 /*
@@ -396,8 +404,6 @@ int main(void)
 	boot_state	=	0;
 
 #ifdef BLINK_LED_WHILE_WAITING
-//	boot_timeout	=	 90000;		//*	should be about 4 seconds
-//	boot_timeout	=	170000;
 	boot_timeout	=	 20000;		//*	should be about 1 second
 #else
 	boot_timeout	=	3500000; // 7 seconds , approx 2us per step when optimize "s"
@@ -1087,7 +1093,10 @@ char	theChar;
 
 	do {
 	#if (FLASHEND > 0x10000)
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 		theChar	=	pgm_read_byte_far((uint32_t)dataPtr++);
+		#pragma GCC diagnostic pop
 	#else
 		theChar	=	pgm_read_byte_near((uint16_t)dataPtr++);
 	#endif
@@ -1347,7 +1356,10 @@ int		errorCount;
 	PrintNewLine();
 	ii			=	0;
 #if (FLASHEND > 0x10000)
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	while (((theChar = pgm_read_byte_far(((uint32_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
+	#pragma GCC diagnostic pop
 #else
 	while (((theChar = pgm_read_byte_near(((uint16_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
 #endif
@@ -1372,7 +1384,10 @@ int		errorCount;
 	errorCount	=	0;
 	ii			=	0;
 #if (FLASHEND > 0x10000)
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
 	while (((theChar = pgm_read_byte_far((uint32_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
+	#pragma GCC diagnostic pop
 #else
 	while (((theChar = pgm_read_byte_near((uint16_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
 #endif
