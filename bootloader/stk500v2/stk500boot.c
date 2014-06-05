@@ -1347,32 +1347,18 @@ unsigned char	*ramPtr;
 //*	returns amount of extended memory
 static void	EEPROMtest(void)
 {
-int		ii;
-char	theChar;
-char	theEEPROMchar;
-int		errorCount;
+	unsigned char theChar;
+	unsigned char theEEPROMchar;
+	unsigned int errorCount;
 
 	PrintFromPROGMEMln(gTextMsg_WriteToEEprom, 0);
 	PrintNewLine();
-	ii			=	0;
-#if (FLASHEND > 0x10000)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-	while (((theChar = pgm_read_byte_far(((uint32_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
-	#pragma GCC diagnostic pop
-#else
-	while (((theChar = pgm_read_byte_near(((uint16_t)gTextMsg_Explorer) + ii)) != '*') && (ii < 512))
-#endif
+
+	for(unsigned int ii = 0; ii < 512; ii++)
 	{
+		theChar = 'A' + (ii % 26);
 		eeprom_write_byte((uint8_t *)ii, theChar);
-		if (theChar == 0)
-		{
-			PrintFromPROGMEM(gTextMsg_SPACE, 0);
-		}
-		else
-		{
-			sendchar(theChar);
-		}
+		sendchar(theChar);
 		ii++;
 	}
 
@@ -1382,30 +1368,16 @@ int		errorCount;
 	PrintFromPROGMEMln(gTextMsg_ReadingEEprom, 0);
 	PrintNewLine();
 	errorCount	=	0;
-	ii			=	0;
-#if (FLASHEND > 0x10000)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
-	while (((theChar = pgm_read_byte_far((uint32_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
-	#pragma GCC diagnostic pop
-#else
-	while (((theChar = pgm_read_byte_near((uint16_t)gTextMsg_Explorer + ii)) != '*') && (ii < 512))
-#endif
+
+	for(unsigned int ii = 0; ii < 512; ii++)
 	{
-		theEEPROMchar	=	eeprom_read_byte((uint8_t *)ii);
-		if (theEEPROMchar == 0)
-		{
-			PrintFromPROGMEM(gTextMsg_SPACE, 0);
-		}
-		else
-		{
-			sendchar(theEEPROMchar);
-		}
+		theChar = 'A' + (ii % 26);
+		theEEPROMchar = eeprom_read_byte((uint8_t *)ii);
+		sendchar(theEEPROMchar);
 		if (theEEPROMchar != theChar)
 		{
 			errorCount++;
 		}
-		ii++;
 	}
 	PrintNewLine();
 	PrintNewLine();
