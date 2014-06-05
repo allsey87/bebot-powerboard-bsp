@@ -218,12 +218,10 @@ LICENSE:
 	#define PROGLED_DDR		DDRB
 	#define PROGLED_PIN		PINB7
 #else
-	#define PROGLED_PORT	PORTG
-	#define PROGLED_DDR		DDRG
-	#define PROGLED_PIN		PING2
+	#define PROGLED_PORT	PORTD
+	#define PROGLED_DDR		DDRD
+	#define PROGLED_PIN		PIND7
 #endif
-
-
 
 /*
  * define CPU frequency in Mhz here if not defined in Makefile
@@ -1295,7 +1293,7 @@ char	theChar;
 
 	do {
 	#if (FLASHEND > 0x10000)
-		theChar	=	pgm_read_byte_far((uint16_t)dataPtr++);
+		theChar	=	pgm_read_byte_far((uint32_t)dataPtr++);
 	#else
 		theChar	=	pgm_read_byte_near((uint16_t)dataPtr++);
 	#endif

@@ -121,7 +121,7 @@ CDEFS = -DF_CPU=$(F_CPU)UL
 #  -Wall...:     warning level
 #  -Wa,...:      tell GCC to pass this to the assembler.
 #    -adhlns...: create assembler listing
-CFLAGS = -g$(DEBUG) --verbose
+CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -fno-jump-tables
@@ -149,8 +149,8 @@ PRINTF_LIB_MIN = -Wl,-u,vfprintf -lprintf_min
 PRINTF_LIB_FLOAT = -Wl,-u,vfprintf -lprintf_flt
 
 # If this is left blank, then it will use the Standard printf version.
-#PRINTF_LIB = 
-PRINTF_LIB = $(PRINTF_LIB_MIN)
+PRINTF_LIB = 
+#PRINTF_LIB = $(PRINTF_LIB_MIN)
 #PRINTF_LIB = $(PRINTF_LIB_FLOAT)
 
 
@@ -161,13 +161,13 @@ SCANF_LIB_MIN = -Wl,-u,vfscanf -lscanf_min
 SCANF_LIB_FLOAT = -Wl,-u,vfscanf -lscanf_flt
 
 # If this is left blank, then it will use the Standard scanf version.
-#SCANF_LIB = 
-SCANF_LIB = $(SCANF_LIB_MIN)
+SCANF_LIB = 
+#SCANF_LIB = $(SCANF_LIB_MIN)
 #SCANF_LIB = $(SCANF_LIB_FLOAT)
 
 MATH_LIB = -lm
 
-C_LIB = -Wl,-L$(TOOLCHAIN)/avrlibc/avr/lib/avr6
+C_LIB = -Wl,-L/home/allsey87/Workspace/Arduino/bebot-powerboard-bsp/toolchain/install/avrlibc/avr/lib/avr6
 
 #---------------- External Memory Options ----------------
 
@@ -180,7 +180,6 @@ C_LIB = -Wl,-L$(TOOLCHAIN)/avrlibc/avr/lib/avr6
 #EXTMEMOPTS = -Wl,--defsym=__heap_start=0x801100,--defsym=__heap_end=0x80ffff
 
 EXTMEMOPTS =
-
 
 #---------------- Linker Options ----------------
 #  -Wl,...:     tell GCC to pass this to linker.
