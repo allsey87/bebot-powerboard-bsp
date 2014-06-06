@@ -34,7 +34,7 @@
 #	<MLS> = Mark Sproul msproul-at-skychariot.com
 
 # Toolchain installation
-TOOLCHAIN = ../../toolchain/install
+TOOLCHAIN = ../toolchain/install
 
 # MCU name
 MCU = atmega2560

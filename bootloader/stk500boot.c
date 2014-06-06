@@ -1359,7 +1359,6 @@ static void	EEPROMtest(void)
 		theChar = 'A' + (ii % 26);
 		eeprom_write_byte((uint8_t *)ii, theChar);
 		sendchar(theChar);
-		ii++;
 	}
 
 	//*	no go back through and test
