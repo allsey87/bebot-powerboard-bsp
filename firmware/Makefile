@@ -18,7 +18,7 @@ FORMAT = ihex
 TARGET = firmware
 
 # List C source files here. (C dependencies are automatically generated.)
-MODULES_SRC = Timer.cpp Stream.cpp HardwareSerial.cpp Firmware.cpp
+MODULES_SRC = Timer.cpp Stream.cpp HardwareSerial.cpp Firmware.cpp String.cpp Print.cpp
 SRC = main.cpp $(MODULES_SRC)
 
 # List any extra directories to look for include files here.
