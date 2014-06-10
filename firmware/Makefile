@@ -27,7 +27,7 @@ COPTIMIZE = -Os
 CTUNING = -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CWARNINGS = -Wall
 #CEXTRA = -Wa,-adhlns=$(<:.c=.lst)
-CINCS = $(TOOLCHAIN)/avrlibc/avr/include
+CINCS = -I$(TOOLCHAIN)/avrlibc/avr/include
 
 
 CXXFLAGS = $(CSTANDARD) $(CDEBUG) $(COPTIMIZE) $(CTUNING) $(CWARNINGS) $(CEXTRA) $(CINCS) -DF_CPU=$(F_CPU)UL

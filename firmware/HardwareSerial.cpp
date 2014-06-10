@@ -4,8 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <avr/interrupt.h>
 
 #include "HardwareSerial.h"
+
+#include <Microcontroller.h>
 
 // Interrupt Routines and Data ////////////////////////////////////////////////////////////////
 
@@ -64,25 +67,21 @@ ISR(USART0_UDRE_vect)
 
 // Constructors ////////////////////////////////////////////////////////////////
 
-HardwareSerial::HardwareSerial(ring_buffer *rx_buffer, ring_buffer *tx_buffer,
-  volatile uint8_t *ubrrh, volatile uint8_t *ubrrl,
-  volatile uint8_t *ucsra, volatile uint8_t *ucsrb,
-  volatile uint8_t *ucsrc, volatile uint8_t *udr,
-  uint8_t rxen, uint8_t txen, uint8_t rxcie, uint8_t udrie, uint8_t u2x)
-{
-  _rx_buffer = rx_buffer;
-  _tx_buffer = tx_buffer;
-  _ubrrh = ubrrh;
-  _ubrrl = ubrrl;
-  _ucsra = ucsra;
-  _ucsrb = ucsrb;
-  _ucsrc = ucsrc;
-  _udr = udr;
-  _rxen = rxen;
-  _txen = txen;
-  _rxcie = rxcie;
-  _udrie = udrie;
-  _u2x = u2x;
+HardwareSerial::HardwareSerial(Timer* p_timer) :
+   Stream(p_timer) {
+   _rx_buffer = &rx_buffer;
+   _tx_buffer = &tx_buffer;
+   _ubrrh = &UBRR0H;
+   _ubrrl = &UBRR0L;
+   _ucsra = &UCSR0A;
+   _ucsrb = &UCSR0B;
+   _ucsrc = &UCSR0C;
+   _udr = &UDR0;
+   _rxen = RXEN0;
+   _txen = TXEN0;
+   _rxcie = RXCIE0;
+   _udrie = UDRIE0;
+   _u2x = U2X0;
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
@@ -187,13 +186,12 @@ void HardwareSerial::flush()
 
 size_t HardwareSerial::write(uint8_t c)
 {
-  int i = (_tx_buffer->head + 1) % SERIAL_BUFFER_SIZE;
+  unsigned int i = (_tx_buffer->head + 1) % SERIAL_BUFFER_SIZE;
 	
   // If the output buffer is full, there's nothing for it other than to 
   // wait for the interrupt handler to empty it a bit
   // ???: return 0 here instead?
-  while (i == _tx_buffer->tail)
-    ;
+  while (i == _tx_buffer->tail);
 	
   _tx_buffer->buffer[_tx_buffer->head] = c;
   _tx_buffer->head = i;

@@ -2,6 +2,8 @@
 #define FIRMWARE_H
 
 /* AVR Headers */
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
 /* Firmware Headers */
 #include <Timer.h>
