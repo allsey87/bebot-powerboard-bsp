@@ -31,7 +31,6 @@ class Stream : public Print
 {
 protected:
 
-   Timer* _ptimer;   
    unsigned long _timeout;      // number of milliseconds to wait for the next char before aborting timed read
    unsigned long _startMillis;  // used for timeout measurement
    int timedRead();    // private method to read stream with timeout
@@ -45,9 +44,7 @@ public:
    virtual int peek() = 0;
    virtual void flush() = 0;
 
-   Stream(Timer* p_timer) :
-      _ptimer(p_timer),
-      _timeout(1000) {}
+   Stream() {_timeout = 1000;}
 
    // parsing methods
 

@@ -8,7 +8,8 @@
 
 #include "HardwareSerial.h"
 
-#include <Microcontroller.h>
+// Singleton Instance /////////////////////////////////////////////////////////////////////////
+HardwareSerial HardwareSerial::_hardware_serial;
 
 // Interrupt Routines and Data ////////////////////////////////////////////////////////////////
 
@@ -67,8 +68,7 @@ ISR(USART0_UDRE_vect)
 
 // Constructors ////////////////////////////////////////////////////////////////
 
-HardwareSerial::HardwareSerial(Timer* p_timer) :
-   Stream(p_timer) {
+HardwareSerial::HardwareSerial() {
    _rx_buffer = &rx_buffer;
    _tx_buffer = &tx_buffer;
    _ubrrh = &UBRR0H;
@@ -82,6 +82,12 @@ HardwareSerial::HardwareSerial(Timer* p_timer) :
    _rxcie = RXCIE0;
    _udrie = UDRIE0;
    _u2x = U2X0;
+
+   /* Disconnect UART (reconnected by begin()) */
+   *_ucsrb = 0;
+
+   /* start up serial */
+   begin(115200);
 }
 
 // Public Methods //////////////////////////////////////////////////////////////

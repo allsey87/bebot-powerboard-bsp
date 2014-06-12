@@ -10,31 +10,32 @@
 #include <HardwareSerial.h>
 
 class Firmware {
-   public:
-      Firmware() {
-         // Enable interrupts
-         sei();
+public:
       
-         // Disconnect UART (reconnected by serial.begin())
-         UCSR0B = 0;
-         
-         // Start-up Serial
-         serial.begin(115200);
-      }
-      
-      int exec() {         
-         for(;;) {
-            if(serial.available()) {
-               serial.write("hello world\n");
-               while(serial.available()) serial.read();
+   static Firmware& instance() {
+      return _firmware;
+   }
+
+   int exec() {         
+      for(;;) {
+         if(HardwareSerial::instance().available()) {
+            HardwareSerial::instance().write("hello world\n");
+            while(HardwareSerial::instance().available()) {
+               HardwareSerial::instance().read();
             }
          }
-         return 0;         
       }
+      return 0;         
+   }
       
-   private:
-      static Timer timer;
-      static HardwareSerial serial;
+private:
+  
+   Firmware() {
+      // Enable interrupts
+      sei();      
+   }
+
+   static Firmware _firmware;
 };
 
 #endif

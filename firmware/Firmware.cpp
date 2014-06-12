@@ -1,17 +1,11 @@
 #include "Firmware.h"
 
-/* Instantiate the firmware */
-Firmware firmware;
+/* initialisation of the static singleton */
+Firmware Firmware::_firmware;
 
-/* Static initialization of the timer */
-Timer Firmware::timer;
-
-/* Static initialization of the serial port */
-HardwareSerial Firmware::serial(&Firmware::timer);
-
-/* Run the firmware */
+/* main function that runs the firmware */
 int main(void)
 {
-   return firmware.exec();
+   return Firmware::instance().exec();
 }
 

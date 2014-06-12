@@ -47,8 +47,13 @@ private:
    uint8_t _udrie;
    uint8_t _u2x;
    bool transmitting;
+
 public:
-   HardwareSerial(Timer* p_timer);
+
+   static HardwareSerial& instance() {
+      return _hardware_serial;
+   }
+
    void begin(unsigned long);
    void end();
    virtual int available(void);
@@ -62,6 +67,14 @@ public:
    inline size_t write(int n) { return write((uint8_t)n); }
    using Print::write; // pull in write(str) and write(buf, size) from Print
    operator bool();
+
+private:
+   
+   /* singleton instance */
+   static HardwareSerial _hardware_serial;
+
+   /* constructor */
+   HardwareSerial();
 };
 
 #endif

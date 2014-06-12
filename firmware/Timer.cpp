@@ -7,9 +7,17 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+// Singleton instance //////////////////////////////////////////////////////////////
+
+Timer Timer::_timer;
+
+// Interrupt Data ////////////////////////////////////////////////////////////////
+
 volatile unsigned long timer0_overflow_count = 0;
 volatile unsigned long timer0_millis = 0;
 static unsigned char timer0_fract = 0;
+
+// Useful Macros ////////////////////////////////////////////////////////////////
 
 #define CLOCK_CYCLES_PER_MICROSECOND() ( F_CPU / 1000000L )
 #define CLOCK_CYCLES_TO_MICROSECONDS(a) ( (a) / CLOCK_CYCLES_PER_MICROSECOND() )
@@ -27,6 +35,8 @@ static unsigned char timer0_fract = 0;
 // about - 8 and 16 MHz - this doesn't lose precision.)
 #define FRACT_INC ((MICROSECONDS_PER_TIMER0_OVERFLOW % 1000) >> 3)
 #define FRACT_MAX (1000 >> 3)
+
+// Overflow interrupt routine ////////////////////////////////////////////////////////////////
 
 ISR(TIMER0_OVF_vect)
 {
@@ -46,6 +56,8 @@ ISR(TIMER0_OVF_vect)
    timer0_millis = m;
    timer0_overflow_count++;
 }
+
+// Member functions ////////////////////////////////////////////////////////////////
 
 Timer::Timer() {
    /* Enable interrupts */

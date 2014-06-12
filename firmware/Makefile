@@ -18,7 +18,7 @@ FORMAT = ihex
 TARGET = firmware
 
 # List source files here.
-SRC =  Firmware.cpp Timer.cpp Stream.cpp HardwareSerial.cpp String.cpp Print.cpp
+SRC =  Firmware.cpp Timer.cpp Stream.cpp HardwareSerial.cpp String.cpp Print.cpp Microcontroller.cpp
 
 # Compiler flags
 CSTANDARD = -std=c++11
