@@ -34,7 +34,7 @@
 #	<MLS> = Mark Sproul msproul-at-skychariot.com
 
 # Toolchain installation
-TOOLCHAIN = ../toolchain/install
+TOOLCHAIN = ../../toolchain/install
 
 # MCU name
 MCU = atmega2560
@@ -119,33 +119,10 @@ CFLAGS += $(CSTANDARD)
 #             files -- see avr-libc docs [FIXME: not yet described there]
 ASFLAGS = -Wa,-adhlns=$(<:.S=.lst),-gstabs 
 
-
-#---------------- Library Options ----------------
-# Minimalistic printf version
-PRINTF_LIB_MIN = -Wl,-u,vfprintf -lprintf_min
-# Floating point printf version (requires MATH_LIB = -lm below)
-PRINTF_LIB_FLOAT = -Wl,-u,vfprintf -lprintf_flt
-
-# If this is left blank, then it will use the Standard printf version.
-PRINTF_LIB = 
-#PRINTF_LIB = $(PRINTF_LIB_MIN)
-#PRINTF_LIB = $(PRINTF_LIB_FLOAT)
-
-# Minimalistic scanf version
-SCANF_LIB_MIN = -Wl,-u,vfscanf -lscanf_min
-# Floating point + %[ scanf version (requires MATH_LIB = -lm below)
-SCANF_LIB_FLOAT = -Wl,-u,vfscanf -lscanf_flt
-
-# If this is left blank, then it will use the Standard scanf version.
-SCANF_LIB = 
-#SCANF_LIB = $(SCANF_LIB_MIN)
-#SCANF_LIB = $(SCANF_LIB_FLOAT)
-
 # Maths Library
 MATH_LIB = -lm
 
 # C Library
-C_LIB = -Wl,-L$(TOOLCHAIN)/avrlibc/avr/lib/avr6
 
 #---------------- External Memory Options ----------------
 
@@ -165,18 +142,18 @@ EXTMEMOPTS =
 #    --cref:    add cross reference to  map file
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += $(EXTMEMOPTS)
-LDFLAGS += $(C_LIB) $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
+LDFLAGS += $(MATH_LIB)
 
 #--------------- bootloader linker Options -------
 LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS)
 
 # Define programs and commands.
 SHELL = sh
-CC = $(TOOLCHAIN)/gcc/bin/avr-gcc
-OBJCOPY = $(TOOLCHAIN)/gcc/bin/avr-objcopy
-OBJDUMP = $(TOOLCHAIN)/gcc/bin/avr-objdump
-SIZE = $(TOOLCHAIN)/gcc/bin/avr-size
-NM = $(TOOLCHAIN)/gcc/bin/avr-nm
+CC = $(TOOLCHAIN)/bin/avr-gcc
+OBJCOPY = $(TOOLCHAIN)/bin/avr-objcopy
+OBJDUMP = $(TOOLCHAIN)/bin/avr-objdump
+SIZE = $(TOOLCHAIN)/bin/avr-size
+NM = $(TOOLCHAIN)/bin/avr-nm
 AVRDUDE = avrdude
 REMOVE = rm -f
 COPY = cp

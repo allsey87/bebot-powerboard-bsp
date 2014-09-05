@@ -6,7 +6,7 @@
 #include <avr/interrupt.h>
 
 /* Firmware Headers */
-#include <Timer.h>
+//#include <Timer.h>
 #include <HardwareSerial.h>
 
 class Firmware {
@@ -16,10 +16,11 @@ public:
       return _firmware;
    }
 
-   int exec() {         
+   int exec() {
+      HardwareSerial::instance().write("Booted\r\n");          
       for(;;) {
          if(HardwareSerial::instance().available()) {
-            HardwareSerial::instance().write("hello world\n");
+            HardwareSerial::instance().write("hello world\r\n");
             while(HardwareSerial::instance().available()) {
                HardwareSerial::instance().read();
             }

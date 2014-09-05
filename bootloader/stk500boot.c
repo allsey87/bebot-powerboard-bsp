@@ -152,7 +152,7 @@ static void	RunMonitor(void);
  * UART Baudrate, AVRStudio AVRISP only accepts 115200 bps
  */
 #ifndef BAUDRATE
-	#define BAUDRATE 115200
+	#define BAUDRATE 57600
 #endif
 
 /*
