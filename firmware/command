@@ -1,0 +1,2 @@
+avrdude -c wiring -p m2560 -P /dev/ttyUSB4 -b 57600 -D -U flash:w:firmware/build/firmware.hex && picocom -b 57600 /dev/ttyUSB4
+

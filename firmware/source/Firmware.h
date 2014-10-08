@@ -9,6 +9,7 @@
 //#include <Timer.h>
 #include <HardwareSerial.h>
 #include <tw_controller.h>
+#include <bq24161_controller.h>
 
 /* I2C Address Space */
 #define MPU6050_ADDR               0x68
@@ -35,33 +36,19 @@ public:
       return _firmware;
    }
 
-   bool InitMPU6050();
-
    int exec() {
       HardwareSerial::instance().write("Booted\r\n");
-      Timer::instance().delay(2000);
+      Timer::instance().delay(500);
       DDRJ = 0x80;
       PORTJ = 0x80;      
       HardwareSerial::instance().write("PWRON\r\n");
-      Timer::instance().delay(2000);
-      CTWController::GetInstance().BeginTransmission(MPU6050_ADDR);
-      CTWController::GetInstance().Write(static_cast<uint8_t>(EMPU6050Register::WHOAMI));
-      CTWController::GetInstance().EndTransmission(false);
-      CTWController::GetInstance().Read(MPU6050_ADDR, 1, true);
-
-      char mpu6050r = CTWController::GetInstance().Read();
-
-      if(mpu6050r == MPU6050_ADDR) {
-         HardwareSerial::instance().write("MPU6050_ADDR detected\r\n");
-      }
-      else {
-         HardwareSerial::instance().write("Fail ");
-         HardwareSerial::instance().write(mpu6050r);
-      }
+      Timer::instance().delay(500);
 
       for(;;) {
          if(HardwareSerial::instance().available()) {
-            HardwareSerial::instance().write("hello world\r\n");
+            TestBQ24161();
+            HardwareSerial::instance().write("\r\n");
+
             while(HardwareSerial::instance().available()) {
                HardwareSerial::instance().read();
             }
@@ -71,11 +58,15 @@ public:
    }
       
 private:
-  
+
    Firmware() {
       // Enable interrupts
       sei();      
    }
+ 
+   void TestBQ24161();  
+
+CBQ24161Controller cBQ24161Controller;
 
    static Firmware _firmware;
 };
