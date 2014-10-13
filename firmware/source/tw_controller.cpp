@@ -28,6 +28,7 @@
 
 #include "tw_controller.h"
 //#include "firmware.h"
+#include <HardwareSerial.h>
 
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
@@ -270,9 +271,24 @@ uint8_t CTWController::Read(uint8_t un_address, uint8_t un_length, bool b_send_s
 
   // copy buffer into class data buffer
   //some unrequired copying happening here / remove after testing
+  HardwareSerial::instance().write("I2C: RX(0x");
+  uint8_t unMSN = un_address >> 4;
+  uint8_t unLSN = un_address & 0x0F;
+  HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));
+  HardwareSerial::instance().write(unLSN < 10 ? '0' + unLSN : 'A' + (unLSN - 10));
+  HardwareSerial::instance().write(") {");
   for(uint8_t i = 0; i < un_length; ++i) {
-    m_punRxBuffer[i] = punMasterBuffer[i];
+     //DEBUG
+     HardwareSerial::instance().write("0x");
+     unMSN = punMasterBuffer[i] >> 4;
+     unLSN = punMasterBuffer[i] & 0x0F;
+     HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));
+     HardwareSerial::instance().write(unLSN < 10 ? '0' + unLSN : 'A' + (unLSN - 10));
+     HardwareSerial::instance().write(", ");
+     //DEBUG
+     m_punRxBuffer[i] = punMasterBuffer[i];
   }
+  HardwareSerial::instance().write("\b\b}\r\n");
 	
   // set rx buffer iterator vars
   m_unRxBufferIndex = 0;
@@ -329,11 +345,30 @@ uint8_t CTWController::EndTransmission(bool b_send_stop) {
    // initialize buffer iteration vars
    unMasterBufferIndex = 0;
    unMasterBufferLength = m_unTxBufferLength;
+
+   // DEBUG
+   HardwareSerial::instance().write("I2C: TX(0x");
+   uint8_t unMSN = m_unTxAddress >> 4;
+   uint8_t unLSN = m_unTxAddress & 0x0F;
+   HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));
+   HardwareSerial::instance().write(unLSN < 10 ? '0' + unLSN : 'A' + (unLSN - 10));
+   HardwareSerial::instance().write(") {");
+   // DEBUG
+
   
    // copy data to twi buffer
    for(uint8_t i = 0; i < m_unTxBufferLength; ++i){
-      punMasterBuffer[i] = m_punTxBuffer[i];
+     //DEBUG
+     HardwareSerial::instance().write("0x");
+     unMSN = m_punTxBuffer[i] >> 4;
+     unLSN = m_punTxBuffer[i] & 0x0F;
+     HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));
+     HardwareSerial::instance().write(unLSN < 10 ? '0' + unLSN : 'A' + (unLSN - 10));
+     HardwareSerial::instance().write(", ");
+     //DEBUG
+     punMasterBuffer[i] = m_punTxBuffer[i];
    }
+   HardwareSerial::instance().write("\b\b}\r\n");
   
    // build sla+w, slave device address + w bit
    unSlarw = TW_WRITE;

@@ -10,8 +10,75 @@ int main(void)
    return Firmware::instance().exec();
 }
 
+void Firmware::TestBQ24250() {
+   cBQ24250Controller.Synchronize();
+
+   HardwareSerial::instance().write("BQ24250:");
+
+   HardwareSerial::instance().write("\r\nstate: ");
+   switch(cBQ24250Controller.GetDeviceState()) {
+   case CBQ24250Controller::EDeviceState::READY:
+      HardwareSerial::instance().write("ready");
+      break;
+   case CBQ24250Controller::EDeviceState::CHARGING:
+      HardwareSerial::instance().write("charging");
+      break;
+   case CBQ24250Controller::EDeviceState::DONE:
+      HardwareSerial::instance().write("done");
+      break;
+   case CBQ24250Controller::EDeviceState::FAULT:
+      HardwareSerial::instance().write("fault");
+      break;
+   }
+
+   HardwareSerial::instance().write("\r\nfault: ");
+   switch(cBQ24250Controller.GetFault()) {
+   case CBQ24250Controller::EFault::NONE:
+      HardwareSerial::instance().write("none");
+      break;
+   case CBQ24250Controller::EFault::INPUT_OVER_VOLTAGE:
+      HardwareSerial::instance().write("input_over_voltage");
+      break;
+   case CBQ24250Controller::EFault::INPUT_UNDER_VOLTAGE:
+      HardwareSerial::instance().write("input_under_voltage");
+      break;
+   case CBQ24250Controller::EFault::SLEEP:
+      HardwareSerial::instance().write("sleep");
+      break;
+   case CBQ24250Controller::EFault::BATT_THERMAL_SHDN:
+      HardwareSerial::instance().write("batt_thermal_shdn");
+      break;
+   case CBQ24250Controller::EFault::BATT_OVER_VOLTAGE:
+      HardwareSerial::instance().write("batt_over_voltage");
+      break;
+   case CBQ24250Controller::EFault::DEV_THERMAL_SHDN:
+      HardwareSerial::instance().write("dev_thermal_shdn");
+      break;
+   case CBQ24250Controller::EFault::DEV_TIMER_FAULT:
+      HardwareSerial::instance().write("dev_timer_fault");
+      break;
+   case CBQ24250Controller::EFault::BATT_DISCONNECTED:
+      HardwareSerial::instance().write("batt_disconnected");
+      break;
+   case CBQ24250Controller::EFault::ISET_SHORTED:
+      HardwareSerial::instance().write("iset_shorted");
+      break;
+   case CBQ24250Controller::EFault::INPUT_FAULT:
+      HardwareSerial::instance().write("input_fault");
+      break;
+   case CBQ24250Controller::EFault::UNDEFINED:
+      HardwareSerial::instance().write("undefined");
+      break;
+   }
+   HardwareSerial::instance().write("\r\n");
+}
+
+
+
 void Firmware::TestBQ24161() {
    cBQ24161Controller.Synchronize();
+
+   HardwareSerial::instance().write("BQ24161:");
 
    HardwareSerial::instance().write("\r\nstate: ");
    switch(cBQ24161Controller.GetDeviceState()) {
@@ -120,4 +187,5 @@ void Firmware::TestBQ24161() {
       HardwareSerial::instance().write("undefined");
       break;
    }
+   HardwareSerial::instance().write("\r\n");
 }
