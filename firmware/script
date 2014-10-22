@@ -1,0 +1,6 @@
+SetBQ24250InputCurrent HIZ
+SetUSBCurrent 100
+TestPMIC BQ24250
+TestPMIC BQ24161
+SetBQ24250InputCurrent HIZ
+SetUSBCurrent 100

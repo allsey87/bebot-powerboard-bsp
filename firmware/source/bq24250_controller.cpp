@@ -12,6 +12,8 @@
 
 #define R0_STAT_MASK 0x30
 #define R0_FAULT_MASK 0x0F
+#define R0_WDEN_MASK 0x40
+#define R0_WDFAULT_MASK 0x80
 
 #define R1_ILIMIT_MASK 0x70
 #define R1_HIZ_MASK 0x01
@@ -205,5 +207,9 @@ void CBQ24250Controller::Synchronize() {
       eFault = EFault::UNDEFINED;
       break;
    }
+
+   /* Update the watchdog variables */
+   bWatchdogEnabled = ((unRegister & R0_WDEN_MASK) != 0);
+   bWatchdogFault = ((unRegister & R0_WDFAULT_MASK) != 0);
 }
 

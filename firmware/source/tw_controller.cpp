@@ -29,6 +29,7 @@
 #include "tw_controller.h"
 //#include "firmware.h"
 #include <HardwareSerial.h>
+#include <Timer.h>
 
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
@@ -271,7 +272,8 @@ uint8_t CTWController::Read(uint8_t un_address, uint8_t un_length, bool b_send_s
 
   // copy buffer into class data buffer
   //some unrequired copying happening here / remove after testing
-  HardwareSerial::instance().write("I2C: RX(0x");
+  HardwareSerial::instance().print(Timer::instance().millis());
+  HardwareSerial::instance().write("ms - I2C: RX(0x");
   uint8_t unMSN = un_address >> 4;
   uint8_t unLSN = un_address & 0x0F;
   HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));
@@ -347,7 +349,8 @@ uint8_t CTWController::EndTransmission(bool b_send_stop) {
    unMasterBufferLength = m_unTxBufferLength;
 
    // DEBUG
-   HardwareSerial::instance().write("I2C: TX(0x");
+   HardwareSerial::instance().print(Timer::instance().millis());
+   HardwareSerial::instance().write("ms - I2C: TX(0x");
    uint8_t unMSN = m_unTxAddress >> 4;
    uint8_t unLSN = m_unTxAddress & 0x0F;
    HardwareSerial::instance().write(unMSN < 10 ? '0' + unMSN : 'A' + (unMSN - 10));

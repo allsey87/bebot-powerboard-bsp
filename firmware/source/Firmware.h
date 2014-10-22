@@ -6,15 +6,17 @@
 #include <avr/interrupt.h>
 
 /* Firmware Headers */
-//#include <Timer.h>
+#include <Timer.h>
 #include <HardwareSerial.h>
 #include <tw_controller.h>
 #include <bq24161_controller.h>
 #include <bq24250_controller.h>
+#include <max5419_controller.h>
 
 /* I2C Address Space */
-#define MPU6050_ADDR               0x68
-
+#define MPU6050_ADDR           0x68
+#define MAX5419_LEDS_ADDR      0x29
+#define MAX5419_MTRS_ADDR      0x28
 
 // TEMP
 #define R4_VDPM_MASK 0x07
@@ -23,8 +25,11 @@
 #define R6_FORCEPTM_MASK 0x04
 #define R1_RST_MASK 0x80
 
+#define KEY_BACKSPACE 0x7F
+#define KEY_TAB 0x09
 
-enum class EMPU6050Register : uint8_t {
+//enum class EMPU6050Register : uint8_t {
+enum {
    /* MPU6050 Registers */
    PWR_MGMT_1     = 0x6B, // R/W
    PWR_MGMT_2     = 0x6C, // R/W
@@ -39,122 +44,154 @@ enum class EMPU6050Register : uint8_t {
    WHOAMI         = 0x75  // R
 };
 
+#define INPUT_BUFFER_LENGTH 32
+
 class Firmware {
 public:
-      
-   static Firmware& instance() {
-      return _firmware;
-   }
+
+   void SetWatchdogPeriod(char* pun_args);
+   void ReadRegister(char* pun_args);
+   void SetVDPMTo4V2(char* pun_args);
+   void CheckFaults(char* pun_args);
+   void SetLEDsMaxCurrent(char* pun_args);
+   void SetSystemEnable(char* pun_args);
+   void SetLEDsEnable(char* pun_args);
+   void SetBQ24250InputCurrent(char* pun_args);
+   void SetUSBCurrent(char* pun_args);
+   void SetBQ24250InputEnable(char* pun_args);
+   void TestPMIC(char* pun_args);  
+
+   struct SCommand {
+      char Label[INPUT_BUFFER_LENGTH];
+      void (Firmware::*Method)(char* pun_args);
+   } psCommands[12] {
+      {"SetWatchdogPeriod", &Firmware::SetWatchdogPeriod},
+      {"ReadRegister", &Firmware::ReadRegister},
+      {"SetVDPMTo4V2", &Firmware::SetVDPMTo4V2},
+      {"CheckFaults", &Firmware::CheckFaults},
+      {"SetBQ24250InputCurrent", &Firmware::SetBQ24250InputCurrent},
+      {"SetUSBCurrent", &Firmware::SetUSBCurrent},
+      {"SetSystemEnable", &Firmware::SetSystemEnable},
+      {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
+      {"SetLEDsEnable", &Firmware::SetLEDsEnable},
+      {"SetBQ24250InputEnable", &Firmware::SetBQ24250InputEnable},
+      {"TestPMIC", &Firmware::TestPMIC},
+      {"EndOfArray", NULL}};
 
    int exec() {
-      HardwareSerial::instance().write("Booted\r\n");
+      uint32_t unLastReset = 0;
+      char punInputBuffer[INPUT_BUFFER_LENGTH] = {};
+      uint8_t unInputBufferIdx = 0;
+      char punLastInputBuffer[INPUT_BUFFER_LENGTH] = {};
+      uint8_t unLastInputBufferIdx = 0;
+
+      //uint8_t unBackspaceCount = 0;
+      uint8_t unInputChar = '\0';
+      bool bParseCommand = false;
+      unWatchdogPeriod = 0;
+      
+      fprintf(m_psIOFile, "Booted\r\n");
       for(;;) {
          if(HardwareSerial::instance().available()) {
-            switch(uint8_t unInput = HardwareSerial::instance().read()) {
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-               cBQ24250Controller.DumpRegister(unInput - '0');
-               break;
-            case 'a':
-               TestBQ24161();
-               break;
-            case 'b':
-               TestBQ24250();
-               break;
-            case 'E':
-               HardwareSerial::instance().write("SYS_EN ON\r\n");
-               DDRJ |= 0x80;
-               PORTJ |= 0x80;      
-               break;
-            case 'e':
-               HardwareSerial::instance().write("SYS_EN OFF\r\n");
-               DDRJ |= 0x80;
-               PORTJ &= ~0x80;      
-               break;
-            case 'F':
-               HardwareSerial::instance().write("BQ24250_IN ON\r\n");
-               DDRE |= 0x80;
-               PORTE |= 0x80;
-               break;
-            case 'f':
-               HardwareSerial::instance().write("BQ24250_IN OFF\r\n");
-               DDRE |= 0x80;
-               PORTE &= ~0x80;
-               break;
-            case 'P':
-               HardwareSerial::instance().write("SET_IN_L500\r\n");
-               cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L500);
-               break;
-            case 'p':
-               HardwareSerial::instance().write("SET_IN_HIZ\r\n");
-               cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::LHIZ);
-               break;
-            case 'r':
-               HardwareSerial::instance().write("RST_BQ24250_WDT\r\n");
-               cBQ24250Controller.ResetWatchdogTimer();
-               break;
-            case 'R':
-               HardwareSerial::instance().write("RST_BQ24250_DEVICE\r\n");
-               cBQ24250Controller.SetRegisterValue(0x01, R1_RST_MASK, 1);
-               break;
-            case 'W':
-               HardwareSerial::instance().write("VDPM 4200mV\r\n");
-               cBQ24250Controller.SetRegisterValue(0x04, R4_VDPM_MASK, 0);
-               break;
-            case 'X':
-               HardwareSerial::instance().write("SYSOFF ON\r\n");
-               cBQ24250Controller.SetRegisterValue(0x05, R5_SYSOFF_MASK, 1);
-               break;
-            case 'x':
-               HardwareSerial::instance().write("SYSOFF OFF\r\n");
-               cBQ24250Controller.SetRegisterValue(0x05, R5_SYSOFF_MASK, 0);
-               break;
-            case 'Y':
-               HardwareSerial::instance().write("TS ON\r\n");
-               cBQ24250Controller.SetRegisterValue(0x05, R5_TSEN_MASK, 1);
-               break;
-            case 'y':
-               HardwareSerial::instance().write("TS OFF\r\n");
-               cBQ24250Controller.SetRegisterValue(0x05, R5_TSEN_MASK, 0);
-               break;
-            case 'Z':
-               HardwareSerial::instance().write("PTM ON\r\n");
-               cBQ24250Controller.SetRegisterValue(0x06, R6_FORCEPTM_MASK, 1);
-               break;
-            case 'z':
-               HardwareSerial::instance().write("PTM OFF\r\n");
-               cBQ24250Controller.SetRegisterValue(0x06, R6_FORCEPTM_MASK, 0);
-               break;
-            }
             while(HardwareSerial::instance().available()) {
-               HardwareSerial::instance().read();
+               unInputChar = HardwareSerial::instance().read();
+               if(unInputChar == KEY_BACKSPACE) {
+                  if(unInputBufferIdx > 0) {
+                     unInputBufferIdx--;
+                  }
+               }
+               else if(unInputChar == KEY_TAB) {
+                  unInputBufferIdx = unLastInputBufferIdx;
+                  strcpy(punInputBuffer, punLastInputBuffer);
+                  fprintf(m_psIOFile, "\r\n%s", punInputBuffer);
+               }
+               else {
+                  /* put the input character into the buffer */
+                  punInputBuffer[unInputBufferIdx] = unInputChar;
+                  /* if it was a character return, we are done, add the null terminating character and break */
+                  if(punInputBuffer[unInputBufferIdx] == '\n' || punInputBuffer[unInputBufferIdx] == '\r') {
+                     punInputBuffer[unInputBufferIdx] = '\0';
+                     unLastInputBufferIdx = unInputBufferIdx;
+                     strcpy(punLastInputBuffer, punInputBuffer);
+                     bParseCommand = true;
+                     /* consume the rest of the characters in the buffer */
+                     while(HardwareSerial::instance().available())
+                        HardwareSerial::instance().read();
+                     break;
+                  }
+                  else {
+                     /* move forwards to the next position in the buffer */
+                     unInputBufferIdx++;
+                     /* if we are at the end of the buffer, add the terminating character and break */
+                     if(unInputBufferIdx >= (INPUT_BUFFER_LENGTH - 1)) {
+                        fprintf(m_psIOFile, "\r\nError: Input Buffer Overflow\r\n");
+                        unInputBufferIdx = 0;
+                        /* consume the rest of the characters in the buffer */
+                        while(HardwareSerial::instance().available())
+                           HardwareSerial::instance().read();
+                        break;
+                     }
+                  }
+               }
             }
+            if(bParseCommand == true) {
+               unInputBufferIdx = 0;
+               bParseCommand = false;
+               fprintf(m_psIOFile, "\r\nInput: %s\r\n", punInputBuffer);
+               /* check if the command has arguments */
+               char* punArguments = strstr(punInputBuffer, " ");
+               /* if the space was found, replace it with a terminating character */
+               if(punArguments != NULL)
+                  *punArguments = '\0';
+
+               /* try find a matching function */
+               for(uint8_t unIdx = 0; psCommands[unIdx].Method != NULL; unIdx++) {
+                  if(strcmp(punInputBuffer, psCommands[unIdx].Label) == 0) {
+                     if(punArguments != NULL)
+                        punArguments += 1;
+                     (this->*psCommands[unIdx].Method)(punArguments);
+                  }
+               }
+            }
+         }
+         if(unWatchdogPeriod != 0 && (Timer::instance().millis() - unLastReset) > unWatchdogPeriod) {
+            HardwareSerial::instance().write("\rResetting Watchdog\r\n");
+            cBQ24250Controller.ResetWatchdogTimer();
+            unLastReset = Timer::instance().millis();
             HardwareSerial::instance().write("\r\n");
+            for(uint8_t unIdx = 0; unIdx < unInputBufferIdx; unIdx++) {
+               HardwareSerial::instance().write(punInputBuffer[unIdx]);
+            }
          }
       }
       return 0;         
    }
+
+
+   static Firmware& instance() {
+      return _firmware;
+   }
+
+   void SetFilePointer(FILE* ps_io_file) {
+      m_psIOFile = ps_io_file;
+   }
+
       
 private:
 
-   Firmware() {
+   Firmware() : 
+      cMAX5419Controller(MAX5419_LEDS_ADDR) {
       // Enable interrupts
       sei();      
    }
- 
-   void TestBQ24161();  
-   void TestBQ24250();
+
+   FILE* m_psIOFile;
+   uint16_t unWatchdogPeriod;
 
    CBQ24161Controller cBQ24161Controller;
    CBQ24250Controller cBQ24250Controller;
+
+   CMAX5419Controller cMAX5419Controller;
 
    static Firmware _firmware;
 };

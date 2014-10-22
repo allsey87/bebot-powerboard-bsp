@@ -48,6 +48,14 @@ public:
 
    void ResetWatchdogTimer();
 
+   bool GetWatchdogEnabled() {
+      return bWatchdogEnabled;
+   }
+
+   bool GetWatchdogFault() {
+      return bWatchdogFault;
+   }
+
    void Synchronize();
 
    EFault GetFault() {
@@ -61,6 +69,8 @@ public:
 private:
    EFault eFault;
    EDeviceState eDeviceState;
+   bool bWatchdogEnabled;
+   bool bWatchdogFault;
 };
 
 #endif

@@ -1,2 +1,5 @@
 avrdude -c wiring -p m2560 -P /dev/ttyUSB4 -b 57600 -D -U flash:w:firmware/build/firmware.hex && picocom -b 57600 /dev/ttyUSB4
 
+make && avrdude -c wiring -p m2560 -P /dev/ttyUSB4 -b 57600 -D -U flash:w:build/firmware.hex && picocom -c --send-cmd "ascii-xfr -s -l50 -c10" -b 57600 /dev/ttyUSB4
+
+
