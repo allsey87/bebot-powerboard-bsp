@@ -27,43 +27,87 @@ int main(void)
    return Firmware::instance().exec();
 }
 
-void Firmware::SetWatchdogPeriod(char* pun_args) {
+void Firmware::SetLeftMotor(char* pun_args) {
    uint16_t unVal = 0;
-   if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
-      unWatchdogPeriod = unVal;
-      fprintf(m_psIOFile, "Watchdog period set to %u\r\n", unWatchdogPeriod);
-   }
-   else {
-      fprintf(m_psIOFile, INVALID_PARAM);
-   }
-}
-
-void Firmware::ReadRegister(char* pun_args) {
-   uint16_t unVal = 0;
-   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0x07) {
-      cBQ24250Controller.DumpRegister(unVal);
-   }
-   else {
-      fprintf(m_psIOFile, INVALID_PARAM);
+   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
+      if(unVal == 0) {
+         cDifferentialDriveController.Disable();
+      }
+      else {
+         cDifferentialDriveController.Enable();
+         cDifferentialDriveController.SetLeftMotor(CDifferentialDriveController::EMode::FORWARD_PWM_FD, unVal);
+      }
+      fprintf(m_psIOFile, "Motor speed set to %u\r\n", unVal);
    }
 }
 
-void Firmware::SetVDPMTo4V2(char* pun_args) {
-   cBQ24250Controller.SetRegisterValue(0x04, R4_VDPM_MASK, 0);
-   fprintf(m_psIOFile, "BQ24250 VDPM set to 4.2V\r\n");
-}
-
-void Firmware::CheckFaults(char* pun_args) {
-   fprintf(m_psIOFile, "LED Fault: %c\r\n", (PINJ & 0x04)==0?'T':'F');
-   fprintf(m_psIOFile, "MTR Fault: %c\r\n", (PINJ & 0x10)==0?'T':'F');
-   fprintf(m_psIOFile, "USB Fault: %c\r\n", (PINJ & 0x01)==0?'T':'F');
-}
 
 void Firmware::SetLEDsMaxCurrent(char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
-      cMAX5419Controller.SetActualValue(unVal);
+      cLEDsCurrentController.SetActualValue(unVal);
       fprintf(m_psIOFile, "Maximum LED current set to %u\r\n", unVal);
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetMotorsMaxCurrent(char* pun_args) {
+   uint16_t unVal = 0;
+   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
+      cMotorsCurrentController.SetActualValue(unVal);
+      fprintf(m_psIOFile, "Maximum motor current set to %u\r\n", unVal);
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetUSBMaxCurrent(char* pun_args) {
+   uint16_t unVal = 0;
+   if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
+      if(unVal == 100 || unVal == 500) {
+         DDRJ |= 0x02;
+         if(unVal == 100) {
+            PORTJ &= ~0x02; 
+         }
+         else {
+            PORTJ |= 0x02;      
+         }
+         fprintf(m_psIOFile, "Maximum USB current set to %u\r\n", unVal);
+         return;
+      }
+   }
+   fprintf(m_psIOFile, INVALID_PARAM);
+}
+
+void Firmware::SetLEDsEnable(char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      DDRJ |= 0x08;
+      PORTJ |= 0x08;      
+      fprintf(m_psIOFile, "LEDs Enable ON\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      DDRJ |= 0x08;
+      PORTJ &= ~0x08;
+      fprintf(m_psIOFile, "LEDs Enable OFF\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetMotorsEnable(char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      DDRJ |= 0x20;
+      PORTJ |= 0x20;      
+      fprintf(m_psIOFile, "Motors Enable ON\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      DDRJ |= 0x20;
+      PORTJ &= ~0x20;
+      fprintf(m_psIOFile, "Motors Enable OFF\r\n");
    }
    else {
       fprintf(m_psIOFile, INVALID_PARAM);
@@ -87,20 +131,9 @@ void Firmware::SetSystemEnable(char* pun_args) {
    }
 }
 
-void Firmware::SetLEDsEnable(char* pun_args) {
-   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
-      DDRJ |= 0x08;
-      PORTJ |= 0x08;      
-      fprintf(m_psIOFile, "LEDs Enable ON\r\n");
-   }
-   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
-      DDRJ |= 0x08;
-      PORTJ &= ~0x08;
-      fprintf(m_psIOFile, "LEDs Enable OFF\r\n");
-   }
-   else {
-      fprintf(m_psIOFile, INVALID_PARAM);
-   }
+void Firmware::SetBQ24250VDPMTo4V2(char* pun_args) {
+   cBQ24250Controller.SetRegisterValue(0x04, R4_VDPM_MASK, 0);
+   fprintf(m_psIOFile, "BQ24250 VDPM set to 4.2V\r\n");
 }
 
 void Firmware::SetBQ24250InputEnable(char* pun_args) {
@@ -133,22 +166,14 @@ void Firmware::SetBQ24250InputCurrent(char* pun_args) {
    }
 }
 
-void Firmware::SetUSBCurrent(char* pun_args) {
+void Firmware::GetBQ24250Register(char* pun_args) {
    uint16_t unVal = 0;
-   if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
-      if(unVal == 100 || unVal == 500) {
-         DDRJ |= 0x02;
-         if(unVal == 100) {
-            PORTJ &= ~0x02; 
-         }
-         else {
-            PORTJ |= 0x02;      
-         }
-         fprintf(m_psIOFile, "Setting USB current to %d\r\n", unVal);
-         return;
-      }
+   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0x07) {
+      cBQ24250Controller.DumpRegister(unVal);
    }
-   fprintf(m_psIOFile, INVALID_PARAM);
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
 }
 
 void Firmware::TestPMIC(char* pun_args) {
@@ -328,4 +353,21 @@ void Firmware::TestPMIC(char* pun_args) {
       }
    }
    fprintf(m_psIOFile, INVALID_PARAM);
+}
+
+void Firmware::CheckFaults(char* pun_args) {
+   fprintf(m_psIOFile, "LED Fault: %c\r\n", (PINJ & 0x04)==0?'T':'F');
+   fprintf(m_psIOFile, "MTR Fault: %c\r\n", (PINJ & 0x10)==0?'T':'F');
+   fprintf(m_psIOFile, "USB Fault: %c\r\n", (PINJ & 0x01)==0?'T':'F');
+}
+
+void Firmware::SetWatchdogPeriod(char* pun_args) {
+   uint16_t unVal = 0;
+   if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
+      unWatchdogPeriod = unVal;
+      fprintf(m_psIOFile, "Watchdog period set to %u\r\n", unWatchdogPeriod);
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
 }

@@ -12,6 +12,7 @@
 #include <bq24161_controller.h>
 #include <bq24250_controller.h>
 #include <max5419_controller.h>
+#include <differential_drive_controller.h>
 
 /* I2C Address Space */
 #define MPU6050_ADDR           0x68
@@ -49,33 +50,40 @@ enum {
 class Firmware {
 public:
 
-   void SetWatchdogPeriod(char* pun_args);
-   void ReadRegister(char* pun_args);
-   void SetVDPMTo4V2(char* pun_args);
-   void CheckFaults(char* pun_args);
+   void SetLeftMotor(char* pun_args); 
+
    void SetLEDsMaxCurrent(char* pun_args);
-   void SetSystemEnable(char* pun_args);
+   void SetMotorsMaxCurrent(char* pun_args);
+   void SetUSBMaxCurrent(char* pun_args);
    void SetLEDsEnable(char* pun_args);
+   void SetMotorsEnable(char* pun_args);
+   void SetSystemEnable(char* pun_args);
+   void SetBQ24250VDPMTo4V2(char* pun_args);
    void SetBQ24250InputCurrent(char* pun_args);
-   void SetUSBCurrent(char* pun_args);
    void SetBQ24250InputEnable(char* pun_args);
+   void GetBQ24250Register(char* pun_args);
    void TestPMIC(char* pun_args);  
+   void CheckFaults(char* pun_args);
+   void SetWatchdogPeriod(char* pun_args);
 
    struct SCommand {
       char Label[INPUT_BUFFER_LENGTH];
       void (Firmware::*Method)(char* pun_args);
-   } psCommands[12] {
-      {"SetWatchdogPeriod", &Firmware::SetWatchdogPeriod},
-      {"ReadRegister", &Firmware::ReadRegister},
-      {"SetVDPMTo4V2", &Firmware::SetVDPMTo4V2},
-      {"CheckFaults", &Firmware::CheckFaults},
-      {"SetBQ24250InputCurrent", &Firmware::SetBQ24250InputCurrent},
-      {"SetUSBCurrent", &Firmware::SetUSBCurrent},
-      {"SetSystemEnable", &Firmware::SetSystemEnable},
+   } psCommands[15] {
+      {"SetLeftMotor", &Firmware::SetLeftMotor},
       {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
+      {"SetMotorsMaxCurrent", &Firmware::SetMotorsMaxCurrent},
+      {"SetUSBMaxCurrent", &Firmware::SetUSBMaxCurrent},
       {"SetLEDsEnable", &Firmware::SetLEDsEnable},
+      {"SetMotorsEnable", &Firmware::SetMotorsEnable},
+      {"SetSystemEnable", &Firmware::SetSystemEnable},
+      {"SetBQ24250VDPMTo4V2", &Firmware::SetBQ24250VDPMTo4V2},
+      {"SetBQ24250InputCurrent", &Firmware::SetBQ24250InputCurrent},
       {"SetBQ24250InputEnable", &Firmware::SetBQ24250InputEnable},
+      {"GetBQ24250Register", &Firmware::GetBQ24250Register},
       {"TestPMIC", &Firmware::TestPMIC},
+      {"CheckFaults", &Firmware::CheckFaults},
+      {"SetWatchdogPeriod", &Firmware::SetWatchdogPeriod},
       {"EndOfArray", NULL}};
 
    int exec() {
@@ -180,8 +188,9 @@ public:
 private:
 
    Firmware() : 
-      cMAX5419Controller(MAX5419_LEDS_ADDR) {
-      // Enable interrupts
+      cLEDsCurrentController(MAX5419_LEDS_ADDR),
+      cMotorsCurrentController(MAX5419_MTRS_ADDR) {
+      /* Enable interrupts */
       sei();      
    }
 
@@ -191,7 +200,10 @@ private:
    CBQ24161Controller cBQ24161Controller;
    CBQ24250Controller cBQ24250Controller;
 
-   CMAX5419Controller cMAX5419Controller;
+   CMAX5419Controller cLEDsCurrentController;
+   CMAX5419Controller cMotorsCurrentController;
+
+   CDifferentialDriveController cDifferentialDriveController;
 
    static Firmware _firmware;
 };
