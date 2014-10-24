@@ -165,8 +165,9 @@ public:
             }
          }
          if(unWatchdogPeriod != 0 && (Timer::instance().millis() - unLastReset) > unWatchdogPeriod) {
-            HardwareSerial::instance().write("\rResetting Watchdog\r\n");
-            cBQ24250Controller.ResetWatchdogTimer();
+            //HardwareSerial::instance().write("\rResetting Watchdog\r\n");
+            //cBQ24250Controller.ResetWatchdogTimer();
+            HardwareSerial::instance().write('\r'); ReadEncoders("");
             unLastReset = Timer::instance().millis();
             HardwareSerial::instance().write("\r\n");
             for(uint8_t unIdx = 0; unIdx < unInputBufferIdx; unIdx++) {

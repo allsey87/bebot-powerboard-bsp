@@ -51,9 +51,9 @@ void SetRightMotor(EMode e_mode, uint8_t un_duty_cycle = 0);
 
 
 //RPM
-int16_t GetLeftSteps();
+int16_t GetLeftRPM();
 
-int16_t GetRightSteps();
+int16_t GetRightRPM();
 
 
 private:

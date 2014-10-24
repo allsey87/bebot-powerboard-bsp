@@ -3,68 +3,85 @@
 
 #include <avr/interrupt.h>
 
-uint8_t unPortSnapshot = 0x00;
-uint8_t unPortLast = PINB;
-
 #define MOVING_AVERAGE_LENGTH 5
+/* Note: TIMER_NUM_OVERFLOWS 60 => 244.8ms for 8MHz with 64 prescaler
+   in 8-bit phase correct PWM mode */
+#define TIMER_OVERFLOWS_PERSAMPLE 60
+#define SAMPLES_PER_MINUTE 245
+/* TODO: Find out the actual value of STEPS_PER_REV. Current value was
+   determined empirically! */
+#define STEPS_PER_REV 7424
 
-int16_t nLeftSteps = 0;
-int16_t nRightSteps = 0;
+volatile uint8_t unPortSnapshot = 0x00;
+volatile uint8_t unPortLast = PINB;
 
-uint8_t unWindowIdx = 0;
+volatile int16_t nLeftSteps[MOVING_AVERAGE_LENGTH] = {};
+volatile int16_t nRightSteps[MOVING_AVERAGE_LENGTH] = {};
 
-#define STATUS_LED 0x80
+volatile uint8_t unWindowIdx = 0;
+volatile uint8_t unTimerOverflowCnt = 0;
 
 ISR(PCINT0_vect) {
    unPortSnapshot = PINB;
    uint8_t unPortDelta = unPortLast ^ unPortSnapshot;
+   /* This intermediate value determines whether the motors are moving
+      backwards or forwards. The expression uses Reed-Muller logic and 
+      leverages the symmetry of the encoder inputs */
    uint8_t unIntermediate = (~unPortSnapshot) ^ (unPortLast << 1);
    /* check the left encoder */
    if(unPortDelta & LEFT_ENC_MASK) {
       if(unIntermediate & LEFT_ENC_CHA_PIN) {
-         nLeftSteps++;
+         nLeftSteps[unWindowIdx]++;
       }
       else {
-         nLeftSteps--;
+         nLeftSteps[unWindowIdx]--;
       }
    }
    /* check the right encoder */
    if(unPortDelta & RIGHT_ENC_MASK) {
       if(unIntermediate & RIGHT_ENC_CHA_PIN) {
-         nRightSteps--;
+         nRightSteps[unWindowIdx]--;
       }
       else {
-         nRightSteps++;
+         nRightSteps[unWindowIdx]++;
       }
    }
    unPortLast = unPortSnapshot;
 }
 
-/*
+
 ISR(TIMER5_OVF_vect) {
-   unWindowIdx = (unWindowIdx + 1) % MOVING_AVERAGE_LENGTH;
-   unPulsesA[unWindowIdx] = 0;
-   unPulsesB[unWindowIdx] = 0;
-}
-*/
-
-
-int16_t CDifferentialDriveController::GetLeftSteps() {
-   uint8_t unSREG = SREG;
-   int16_t nCount;
-   cli();
-   nCount = nLeftSteps;
-   SREG = unSREG;
-   return nCount;
+   if(unTimerOverflowCnt < TIMER_OVERFLOWS_PERSAMPLE) {
+      unTimerOverflowCnt++;
+   }
+   else {
+      unTimerOverflowCnt = 0;
+      unWindowIdx = (unWindowIdx + 1) % MOVING_AVERAGE_LENGTH;
+      nLeftSteps[unWindowIdx] = 0;
+      nRightSteps[unWindowIdx] = 0;
+   }
 }
 
-int16_t CDifferentialDriveController::GetRightSteps() {
+int16_t CDifferentialDriveController::GetLeftRPM() {
    uint8_t unSREG = SREG;
-   int16_t nCount;
+   int32_t nTotalSteps = 0;
    cli();
-   nCount = nRightSteps;
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nTotalSteps += (unIdx != unWindowIdx) ? nLeftSteps[unIdx] : 0;
+   }
    SREG = unSREG;
-   return nCount;
+   return (nTotalSteps * SAMPLES_PER_MINUTE) / ((MOVING_AVERAGE_LENGTH - 1) * STEPS_PER_REV);
+}
+
+int16_t CDifferentialDriveController::GetRightRPM() {
+   uint8_t unSREG = SREG;
+   int32_t nTotalSteps = 0;
+   cli();
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nTotalSteps += (unIdx != unWindowIdx) ? nRightSteps[unIdx] : 0;
+   }
+   SREG = unSREG;
+   return (nTotalSteps * SAMPLES_PER_MINUTE) / ((MOVING_AVERAGE_LENGTH - 1) * STEPS_PER_REV);
 }
 
 
@@ -102,7 +119,7 @@ CDifferentialDriveController::CDifferentialDriveController() {
 
 
    /* Enable the overflow interrupt on timer 5 (set at BOTTOM) */
-   //TIMSK5 |= (1 << TOIE5);
+   TIMSK5 |= (1 << TOIE5);
 
    /* Debugging only*/
    //DDRD |= STATUS_LED;

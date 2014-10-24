@@ -29,9 +29,9 @@ int main(void)
 
 void Firmware::ReadEncoders(char* pun_args) {
    fprintf(m_psIOFile,
-           "Left Steps = %d, Right Steps = %d\r\n", 
-           cDifferentialDriveController.GetLeftSteps(),
-           cDifferentialDriveController.GetRightSteps());
+           "Left RPM = %d, Right RPM = %d\r\n", 
+           cDifferentialDriveController.GetLeftRPM(),
+           cDifferentialDriveController.GetRightRPM());
 }
 
 void Firmware::SetLeftMotor(char* pun_args) {
