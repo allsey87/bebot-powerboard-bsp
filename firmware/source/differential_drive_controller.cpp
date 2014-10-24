@@ -1,6 +1,73 @@
 
 #include "differential_drive_controller.h"
 
+#include <avr/interrupt.h>
+
+uint8_t unPortSnapshot = 0x00;
+uint8_t unPortLast = PINB;
+
+#define MOVING_AVERAGE_LENGTH 5
+
+int16_t nLeftSteps = 0;
+int16_t nRightSteps = 0;
+
+uint8_t unWindowIdx = 0;
+
+#define STATUS_LED 0x80
+
+ISR(PCINT0_vect) {
+   unPortSnapshot = PINB;
+   uint8_t unPortDelta = unPortLast ^ unPortSnapshot;
+   uint8_t unIntermediate = (~unPortSnapshot) ^ (unPortLast << 1);
+   /* check the left encoder */
+   if(unPortDelta & LEFT_ENC_MASK) {
+      if(unIntermediate & LEFT_ENC_CHA_PIN) {
+         nLeftSteps++;
+      }
+      else {
+         nLeftSteps--;
+      }
+   }
+   /* check the right encoder */
+   if(unPortDelta & RIGHT_ENC_MASK) {
+      if(unIntermediate & RIGHT_ENC_CHA_PIN) {
+         nRightSteps--;
+      }
+      else {
+         nRightSteps++;
+      }
+   }
+   unPortLast = unPortSnapshot;
+}
+
+/*
+ISR(TIMER5_OVF_vect) {
+   unWindowIdx = (unWindowIdx + 1) % MOVING_AVERAGE_LENGTH;
+   unPulsesA[unWindowIdx] = 0;
+   unPulsesB[unWindowIdx] = 0;
+}
+*/
+
+
+int16_t CDifferentialDriveController::GetLeftSteps() {
+   uint8_t unSREG = SREG;
+   int16_t nCount;
+   cli();
+   nCount = nLeftSteps;
+   SREG = unSREG;
+   return nCount;
+}
+
+int16_t CDifferentialDriveController::GetRightSteps() {
+   uint8_t unSREG = SREG;
+   int16_t nCount;
+   cli();
+   nCount = nRightSteps;
+   SREG = unSREG;
+   return nCount;
+}
+
+
 CDifferentialDriveController::CDifferentialDriveController() {
    /* set the drive system initially to coast mode, with the h-bridge disabled */
    PORTL &= ~(LEFT_MODE_PIN  |
@@ -26,6 +93,19 @@ CDifferentialDriveController::CDifferentialDriveController() {
    /* Left and right motor duty cycle to zero respectively*/
    OCR5C = 0;
    OCR5B = 0;
+
+   /* Encoder init logic */
+   /* Enable port change interrupts on PCINT4, PCINT5 (left) and PCINT6, PCINT7 (right) */
+   PCMSK0 |= ((1 << PCINT4) | (1 << PCINT5) | (1 << PCINT6) | (1 << PCINT7));
+   /* Enable the port change interrupt group PCINT0-7 */
+   PCICR |= (1 << PCIE0);
+
+
+   /* Enable the overflow interrupt on timer 5 (set at BOTTOM) */
+   //TIMSK5 |= (1 << TOIE5);
+
+   /* Debugging only*/
+   //DDRD |= STATUS_LED;
 }
 
 void CDifferentialDriveController::Enable() {

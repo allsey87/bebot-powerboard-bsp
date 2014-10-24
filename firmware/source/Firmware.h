@@ -50,6 +50,7 @@ enum {
 class Firmware {
 public:
 
+   void ReadEncoders(char* pun_args);
    void SetLeftMotor(char* pun_args); 
 
    void SetLEDsMaxCurrent(char* pun_args);
@@ -69,7 +70,8 @@ public:
    struct SCommand {
       char Label[INPUT_BUFFER_LENGTH];
       void (Firmware::*Method)(char* pun_args);
-   } psCommands[15] {
+   } psCommands[16] {
+      {"ReadEncoders", &Firmware::ReadEncoders},
       {"SetLeftMotor", &Firmware::SetLeftMotor},
       {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
       {"SetMotorsMaxCurrent", &Firmware::SetMotorsMaxCurrent},

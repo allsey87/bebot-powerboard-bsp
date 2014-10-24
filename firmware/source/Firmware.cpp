@@ -27,6 +27,13 @@ int main(void)
    return Firmware::instance().exec();
 }
 
+void Firmware::ReadEncoders(char* pun_args) {
+   fprintf(m_psIOFile,
+           "Left Steps = %d, Right Steps = %d\r\n", 
+           cDifferentialDriveController.GetLeftSteps(),
+           cDifferentialDriveController.GetRightSteps());
+}
+
 void Firmware::SetLeftMotor(char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
