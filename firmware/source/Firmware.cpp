@@ -27,29 +27,113 @@ int main(void)
    return Firmware::instance().exec();
 }
 
-void Firmware::ReadEncoders(char* pun_args) {
+void Firmware::ReadEncoders(const char* pun_args) {
    fprintf(m_psIOFile,
            "Left RPM = %d, Right RPM = %d\r\n", 
            cDifferentialDriveController.GetLeftRPM(),
            cDifferentialDriveController.GetRightRPM());
 }
 
-void Firmware::SetLeftMotor(char* pun_args) {
-   uint16_t unVal = 0;
-   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
-      if(unVal == 0) {
-         cDifferentialDriveController.Disable();
+
+void Firmware::SetMotors(const char* pun_args) {
+   if(pun_args != NULL) {
+      const char* punLeftMotorArgs = strstr(pun_args, "l:");
+      const char* punRightMotorArgs = strstr(pun_args, "r:");
+      if(punLeftMotorArgs != NULL) {
+         fprintf(m_psIOFile, "Left ");
+         SetMotor(&CDifferentialDriveController::SetLeftMotor, punLeftMotorArgs + 2);
       }
-      else {
-         cDifferentialDriveController.Enable();
-         cDifferentialDriveController.SetLeftMotor(CDifferentialDriveController::EMode::FORWARD_PWM_FD, unVal);
+
+      if(punRightMotorArgs != NULL) {
+         fprintf(m_psIOFile, "Right ");
+         SetMotor(&CDifferentialDriveController::SetRightMotor, punRightMotorArgs + 2);
       }
-      fprintf(m_psIOFile, "Motor speed set to %u\r\n", unVal);
    }
 }
 
 
-void Firmware::SetLEDsMaxCurrent(char* pun_args) {
+void Firmware::SetMotor(void (CDifferentialDriveController::*pf_set_motor)
+                        (CDifferentialDriveController::EMode, uint8_t),
+                        const char* pun_args) {
+   uint16_t unNumArgs = 0, unSpeed = 0;
+   char chMode;
+   char pchPWMMode[3];
+   bool bInputValid = false;
+   if(pun_args != NULL) {
+      unNumArgs = sscanf(pun_args, "%c%2[fsd]:0x%02x", &chMode, pchPWMMode, &unSpeed);
+      if(unNumArgs > 0) {
+         switch(chMode) {
+         case 'c':
+            (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::COAST,0);
+            fprintf(m_psIOFile, "motor mode set to coast\r\n", pun_args);
+            bInputValid = true;
+            break;
+         case 'b':
+            (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::BRAKE,0);
+            fprintf(m_psIOFile, "motor mode set to brake\r\n", pun_args);
+            bInputValid = true;
+            break;
+         case 'f':
+            if(unNumArgs == 1) {
+               (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::FORWARD,0);
+               fprintf(m_psIOFile, "motor mode set to forwards\r\n", pun_args);
+               bInputValid = true;
+            }
+            else if(unNumArgs == 3) {
+               if(strstr(pchPWMMode, "fd") != NULL && (unSpeed >= 0x00) && (unSpeed <= 0xFF)) {
+                  (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::FORWARD_PWM_FD,
+                                                            unSpeed);
+                  fprintf(m_psIOFile, "motor mode set to forwards PWM fast decay at %u\r\n", unSpeed);
+                  bInputValid = true;
+               }
+               else if(strstr(pchPWMMode, "sd") != NULL && (unSpeed >= 0x00) && (unSpeed <= 0xFF)) {
+                  (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::FORWARD_PWM_SD,
+                                                            unSpeed);
+                  fprintf(m_psIOFile, "motor mode set to forwards PWM slow decay at %u\r\n", unSpeed);
+                  bInputValid = true;
+               }
+            }
+            break;
+         case 'r':
+            if(unNumArgs == 1) {
+               (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::REVERSE,0);
+               bInputValid = true;
+               fprintf(m_psIOFile, "motor mode set to reverse\r\n", pun_args);
+            }
+            else if(unNumArgs == 3) {
+               if(strstr(pchPWMMode, "fd") != NULL && (unSpeed >= 0x00) && (unSpeed <= 0xFF)) {
+                  (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::REVERSE_PWM_FD,
+                                                            unSpeed);
+                  fprintf(m_psIOFile, "motor mode set to reverse PWM fast decay at %u\r\n", unSpeed);
+                  bInputValid = true;
+               }
+               else if(strstr(pchPWMMode, "sd") != NULL && (unSpeed >= 0x00) && (unSpeed <= 0xFF)) {
+                  (cDifferentialDriveController.*pf_set_motor)(CDifferentialDriveController::EMode::REVERSE_PWM_SD,
+                                                            unSpeed);
+                  fprintf(m_psIOFile, "motor mode set to reverse PWM slow decay at %u\r\n", unSpeed);
+                  bInputValid = true;
+               }
+            }
+            break;
+         }
+      }
+   }
+
+
+   
+
+   if(!bInputValid) {
+      cDifferentialDriveController.Disable();
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+   else {
+      cDifferentialDriveController.Enable();
+   }
+   return;
+}
+
+
+void Firmware::SetLEDsMaxCurrent(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
       cLEDsCurrentController.SetActualValue(unVal);
@@ -60,7 +144,7 @@ void Firmware::SetLEDsMaxCurrent(char* pun_args) {
    }
 }
 
-void Firmware::SetMotorsMaxCurrent(char* pun_args) {
+void Firmware::SetMotorsMaxCurrent(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
       cMotorsCurrentController.SetActualValue(unVal);
@@ -71,7 +155,7 @@ void Firmware::SetMotorsMaxCurrent(char* pun_args) {
    }
 }
 
-void Firmware::SetUSBMaxCurrent(char* pun_args) {
+void Firmware::SetUSBMaxCurrent(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
       if(unVal == 100 || unVal == 500) {
@@ -89,7 +173,7 @@ void Firmware::SetUSBMaxCurrent(char* pun_args) {
    fprintf(m_psIOFile, INVALID_PARAM);
 }
 
-void Firmware::SetLEDsEnable(char* pun_args) {
+void Firmware::SetLEDsEnable(const char* pun_args) {
    if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
       DDRJ |= 0x08;
       PORTJ |= 0x08;      
@@ -105,7 +189,7 @@ void Firmware::SetLEDsEnable(char* pun_args) {
    }
 }
 
-void Firmware::SetMotorsEnable(char* pun_args) {
+void Firmware::SetMotorsEnable(const char* pun_args) {
    if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
       DDRJ |= 0x20;
       PORTJ |= 0x20;      
@@ -122,7 +206,7 @@ void Firmware::SetMotorsEnable(char* pun_args) {
 }
 
 
-void Firmware::SetSystemEnable(char* pun_args) {
+void Firmware::SetSystemEnable(const char* pun_args) {
    if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
       DDRJ |= 0x80;
       PORTJ |= 0x80;
@@ -138,12 +222,12 @@ void Firmware::SetSystemEnable(char* pun_args) {
    }
 }
 
-void Firmware::SetBQ24250VDPMTo4V2(char* pun_args) {
+void Firmware::SetBQ24250VDPMTo4V2(const char* pun_args) {
    cBQ24250Controller.SetRegisterValue(0x04, R4_VDPM_MASK, 0);
    fprintf(m_psIOFile, "BQ24250 VDPM set to 4.2V\r\n");
 }
 
-void Firmware::SetBQ24250InputEnable(char* pun_args) {
+void Firmware::SetBQ24250InputEnable(const char* pun_args) {
    if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
       DDRE |= 0x80;
       PORTE |= 0x80;
@@ -159,7 +243,7 @@ void Firmware::SetBQ24250InputEnable(char* pun_args) {
    }
 }
 
-void Firmware::SetBQ24250InputCurrent(char* pun_args) {
+void Firmware::SetBQ24250InputCurrent(const char* pun_args) {
    if(pun_args != NULL && strstr(pun_args, "100") != NULL) {
       cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L100);
       fprintf(m_psIOFile, "BQ24250 Input Current %s\r\n", pun_args);
@@ -173,7 +257,7 @@ void Firmware::SetBQ24250InputCurrent(char* pun_args) {
    }
 }
 
-void Firmware::GetBQ24250Register(char* pun_args) {
+void Firmware::GetBQ24250Register(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0x07) {
       cBQ24250Controller.DumpRegister(unVal);
@@ -183,7 +267,7 @@ void Firmware::GetBQ24250Register(char* pun_args) {
    }
 }
 
-void Firmware::TestPMIC(char* pun_args) {
+void Firmware::TestPMIC(const char* pun_args) {
    uint16_t unPartNum = 0;
    if(pun_args != NULL && sscanf(pun_args, "BQ%u", &unPartNum) == 1) {
       if(unPartNum == 24250) {
@@ -362,13 +446,13 @@ void Firmware::TestPMIC(char* pun_args) {
    fprintf(m_psIOFile, INVALID_PARAM);
 }
 
-void Firmware::CheckFaults(char* pun_args) {
+void Firmware::CheckFaults(const char* pun_args) {
    fprintf(m_psIOFile, "LED Fault: %c\r\n", (PINJ & 0x04)==0?'T':'F');
    fprintf(m_psIOFile, "MTR Fault: %c\r\n", (PINJ & 0x10)==0?'T':'F');
    fprintf(m_psIOFile, "USB Fault: %c\r\n", (PINJ & 0x01)==0?'T':'F');
 }
 
-void Firmware::SetWatchdogPeriod(char* pun_args) {
+void Firmware::SetWatchdogPeriod(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "%u", &unVal) == 1) {
       unWatchdogPeriod = unVal;

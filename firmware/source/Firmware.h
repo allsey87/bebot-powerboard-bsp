@@ -45,34 +45,34 @@ enum {
    WHOAMI         = 0x75  // R
 };
 
-#define INPUT_BUFFER_LENGTH 32
+#define INPUT_BUFFER_LENGTH 40
 
 class Firmware {
 public:
 
-   void ReadEncoders(char* pun_args);
-   void SetLeftMotor(char* pun_args); 
+   void ReadEncoders(const char* pun_args);
+   void SetMotors(const char* pun_args); 
 
-   void SetLEDsMaxCurrent(char* pun_args);
-   void SetMotorsMaxCurrent(char* pun_args);
-   void SetUSBMaxCurrent(char* pun_args);
-   void SetLEDsEnable(char* pun_args);
-   void SetMotorsEnable(char* pun_args);
-   void SetSystemEnable(char* pun_args);
-   void SetBQ24250VDPMTo4V2(char* pun_args);
-   void SetBQ24250InputCurrent(char* pun_args);
-   void SetBQ24250InputEnable(char* pun_args);
-   void GetBQ24250Register(char* pun_args);
-   void TestPMIC(char* pun_args);  
-   void CheckFaults(char* pun_args);
-   void SetWatchdogPeriod(char* pun_args);
+   void SetLEDsMaxCurrent(const char* pun_args);
+   void SetMotorsMaxCurrent(const char* pun_args);
+   void SetUSBMaxCurrent(const char* pun_args);
+   void SetLEDsEnable(const char* pun_args);
+   void SetMotorsEnable(const char* pun_args);
+   void SetSystemEnable(const char* pun_args);
+   void SetBQ24250VDPMTo4V2(const char* pun_args);
+   void SetBQ24250InputCurrent(const char* pun_args);
+   void SetBQ24250InputEnable(const char* pun_args);
+   void GetBQ24250Register(const char* pun_args);
+   void TestPMIC(const char* pun_args);  
+   void CheckFaults(const char* pun_args);
+   void SetWatchdogPeriod(const char* pun_args);
 
    struct SCommand {
       char Label[INPUT_BUFFER_LENGTH];
-      void (Firmware::*Method)(char* pun_args);
+      void (Firmware::*Method)(const char* pun_args);
    } psCommands[16] {
       {"ReadEncoders", &Firmware::ReadEncoders},
-      {"SetLeftMotor", &Firmware::SetLeftMotor},
+      {"SetMotors", &Firmware::SetMotors},
       {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
       {"SetMotorsMaxCurrent", &Firmware::SetMotorsMaxCurrent},
       {"SetUSBMaxCurrent", &Firmware::SetUSBMaxCurrent},
@@ -186,6 +186,11 @@ public:
    void SetFilePointer(FILE* ps_io_file) {
       m_psIOFile = ps_io_file;
    }
+
+   void SetMotor(void (CDifferentialDriveController::*pf_set_motor)
+                 (CDifferentialDriveController::EMode, uint8_t),
+                 const char* pun_args);
+      
 
       
 private:

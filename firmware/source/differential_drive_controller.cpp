@@ -62,6 +62,7 @@ ISR(TIMER5_OVF_vect) {
    }
 }
 
+/*
 int16_t CDifferentialDriveController::GetLeftRPM() {
    uint8_t unSREG = SREG;
    int32_t nTotalSteps = 0;
@@ -83,7 +84,53 @@ int16_t CDifferentialDriveController::GetRightRPM() {
    SREG = unSREG;
    return (nTotalSteps * SAMPLES_PER_MINUTE) / ((MOVING_AVERAGE_LENGTH - 1) * STEPS_PER_REV);
 }
+*/
 
+int16_t CDifferentialDriveController::GetLeftRPM() {
+   uint8_t unWindowIdxCp = 0, unSREG;
+   int16_t nStepsCp[MOVING_AVERAGE_LENGTH] = {};
+   int32_t nTotalSteps = 0;
+   /* clear interrupts */
+   unSREG = SREG;
+   cli();
+   /* quickly copy data */
+   /*
+   unWindowIdxCp = unWindowIdx;
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nStepsCp[unIdx] = nLeftSteps[unIdx];
+   }
+   */
+   /* restore interrupts */
+   SREG = unSREG;
+   /* do computation */
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nTotalSteps += (unIdx != unWindowIdxCp) ? nStepsCp[unIdx] : 0;
+   }
+   return (nTotalSteps * SAMPLES_PER_MINUTE) / ((MOVING_AVERAGE_LENGTH - 1) * STEPS_PER_REV);
+}
+
+int16_t CDifferentialDriveController::GetRightRPM() {
+   uint8_t unWindowIdxCp = 0, unSREG;
+   int16_t nStepsCp[MOVING_AVERAGE_LENGTH] = {};
+   int32_t nTotalSteps = 0;
+   /* clear interrupts */
+   unSREG = SREG;
+   cli();
+   /* quickly copy data */
+   /*
+   unWindowIdxCp = unWindowIdx;
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nStepsCp[unIdx] = nRightSteps[unIdx];
+   }
+   */
+   /* restore interrupts */
+   SREG = unSREG;
+   /* do computation */
+   for(uint8_t unIdx = 0; unIdx < MOVING_AVERAGE_LENGTH; unIdx++) {
+      nTotalSteps += (unIdx != unWindowIdxCp) ? nStepsCp[unIdx] : 0;
+   }
+   return (nTotalSteps * SAMPLES_PER_MINUTE) / ((MOVING_AVERAGE_LENGTH - 1) * STEPS_PER_REV);
+}
 
 CDifferentialDriveController::CDifferentialDriveController() {
    /* set the drive system initially to coast mode, with the h-bridge disabled */
@@ -138,24 +185,99 @@ void CDifferentialDriveController::Disable() {
 void CDifferentialDriveController::SetLeftMotor(EMode e_mode, uint8_t un_duty_cycle) {
    switch(e_mode) {
    case EMode::REVERSE_PWM_FD:
+      PORTL |= LEFT_CTRL_PIN;
+      PORTL &= ~LEFT_MODE_PIN; //
+      break;
    case EMode::REVERSE_PWM_SD:
+      un_duty_cycle = 0xFF - un_duty_cycle;
+      PORTL &= ~LEFT_CTRL_PIN;
+      PORTL |= LEFT_MODE_PIN; //
+      break;
    case EMode::FORWARD_PWM_FD:
+      PORTL &= ~LEFT_CTRL_PIN;
+      PORTL &= ~LEFT_MODE_PIN; //
+      break;
    case EMode::FORWARD_PWM_SD:
-      OCR5C = un_duty_cycle;
-      TCCR5A |= (1 << COM5C1);
+      un_duty_cycle = 0xFF - un_duty_cycle;
+      PORTL |= LEFT_CTRL_PIN;
+      PORTL |= LEFT_MODE_PIN; //
       break;
    case EMode::COAST:
+      PORTL &= ~(LEFT_PWM_PIN | LEFT_CTRL_PIN | LEFT_MODE_PIN);
+      break;
    case EMode::REVERSE:
+      PORTL |= LEFT_PWM_PIN;
+      PORTL &= ~LEFT_MODE_PIN;
+      PORTL |= LEFT_CTRL_PIN;
+      break;
    case EMode::FORWARD:
+      PORTL |= LEFT_PWM_PIN;
+      PORTL &= ~LEFT_MODE_PIN;
+      PORTL &= ~LEFT_CTRL_PIN;
+      break;
    case EMode::BRAKE:
+      PORTL |= (LEFT_PWM_PIN | LEFT_CTRL_PIN | LEFT_MODE_PIN);
+      break;
+   }
+
+   if(e_mode == EMode::COAST || e_mode == EMode::REVERSE || e_mode == EMode::FORWARD || e_mode == EMode::BRAKE) {
+      /* disconnect PWM from the output pin */
       OCR5C = 0;
       TCCR5A &= ~(1 << COM5C1);
-      break;
+   }
+   else {
+      /* connect PWM to the output pin */
+      OCR5C = un_duty_cycle;
+      TCCR5A |= (1 << COM5C1);
    }
 }
 
 void CDifferentialDriveController::SetRightMotor(EMode e_mode, uint8_t un_duty_cycle) {
-   /* Connect the right PWM signal to the motor */
-   //sbi(TCCR5A, COM5B1);
+   switch(e_mode) {
+   case EMode::REVERSE_PWM_FD:
+      PORTL &= ~RIGHT_CTRL_PIN;
+      PORTL &= ~RIGHT_MODE_PIN; //
+      break;
+   case EMode::REVERSE_PWM_SD:
+      un_duty_cycle = 0xFF - un_duty_cycle;
+      PORTL |= RIGHT_CTRL_PIN;
+      PORTL |= RIGHT_MODE_PIN; //
+      break;
+   case EMode::FORWARD_PWM_FD:
+      PORTL |= RIGHT_CTRL_PIN;
+      PORTL &= ~RIGHT_MODE_PIN; //
+      break;
+   case EMode::FORWARD_PWM_SD:
+      un_duty_cycle = 0xFF - un_duty_cycle;
+      PORTL &= ~RIGHT_CTRL_PIN;
+      PORTL |= RIGHT_MODE_PIN; //
+      break;
+   case EMode::COAST:
+      PORTL &= ~(RIGHT_PWM_PIN | RIGHT_CTRL_PIN | RIGHT_MODE_PIN);
+      break;
+   case EMode::REVERSE:
+      PORTL |= RIGHT_PWM_PIN;
+      PORTL &= ~RIGHT_MODE_PIN;
+      PORTL &= ~RIGHT_CTRL_PIN;
+      break;
+   case EMode::FORWARD:
+      PORTL |= RIGHT_PWM_PIN;
+      PORTL &= ~RIGHT_MODE_PIN;
+      PORTL |= RIGHT_CTRL_PIN;
+      break;
+   case EMode::BRAKE:
+      PORTL |= (RIGHT_PWM_PIN | RIGHT_CTRL_PIN | RIGHT_MODE_PIN);
+      break;
+   }
 
+   if(e_mode == EMode::COAST || e_mode == EMode::REVERSE || e_mode == EMode::FORWARD || e_mode == EMode::BRAKE) {
+      /* disconnect PWM from the output pin */
+      OCR5B = 0;
+      TCCR5A &= ~(1 << COM5B1);
+   }
+   else {
+      /* connect PWM to the output pin */
+      OCR5B = un_duty_cycle;
+      TCCR5A |= (1 << COM5B1);
+   }
 }
