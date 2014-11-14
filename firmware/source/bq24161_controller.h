@@ -1,6 +1,8 @@
 #ifndef BQ24161_CONTROLLER_H
 #define BQ24161_CONTROLLER_H
 
+#include <stdint.h>
+
 class CBQ24161Controller {
 public:
 
@@ -36,6 +38,20 @@ public:
       UNDER_VOLTAGE
    };
 
+   enum class EUSBInputLimit {
+      L100,
+      L150,
+      L500,
+      L800,
+      L900,
+      L1500
+   };
+
+   enum class EAdapterInputLimit {
+      L1500,
+      L2500
+   };
+
    enum class EBatteryState {
       NORMAL,
       OVER_VOLTAGE,
@@ -46,7 +62,13 @@ public:
    void Synchronize();
 
    //void SetPreferredSource(ESource); //USB / ADAPTER
+   //void SetAdapterInputLimit(EAdapterInputLimit)
 
+   void DumpRegister(uint8_t un_addr);
+
+   void SetUSBInputLimit(EUSBInputLimit e_usb_input_limit);
+
+   void ResetWatchdogTimer();
 
    EFault GetFault() {
       return eFault;
@@ -55,7 +77,7 @@ public:
    ESource GetSelectedSource() {
       return eSelectedSource;
    }
-    
+   
    EDeviceState GetDeviceState() {
       return eDeviceState;
    }

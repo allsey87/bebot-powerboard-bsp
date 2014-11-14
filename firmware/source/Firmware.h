@@ -12,7 +12,11 @@
 #include <bq24161_controller.h>
 #include <bq24250_controller.h>
 #include <max5419_controller.h>
+
+/* rename to drive_system.h */
 #include <differential_drive_controller.h>
+
+#include <usb_interface_system.h>
 
 /* I2C Address Space */
 #define MPU6050_ADDR           0x68
@@ -63,6 +67,8 @@ public:
    void SetBQ24250InputCurrent(const char* pun_args);
    void SetBQ24250InputEnable(const char* pun_args);
    void GetBQ24250Register(const char* pun_args);
+   void SetBQ24161InputCurrent(const char* pun_args);
+   void GetBQ24161Register(const char* pun_args);
    void TestPMIC(const char* pun_args);  
    void CheckFaults(const char* pun_args);
    void SetWatchdogPeriod(const char* pun_args);
@@ -70,7 +76,7 @@ public:
    struct SCommand {
       char Label[INPUT_BUFFER_LENGTH];
       void (Firmware::*Method)(const char* pun_args);
-   } psCommands[16] {
+   } psCommands[18] {
       {"ReadEncoders", &Firmware::ReadEncoders},
       {"SetMotors", &Firmware::SetMotors},
       {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
@@ -83,6 +89,8 @@ public:
       {"SetBQ24250InputCurrent", &Firmware::SetBQ24250InputCurrent},
       {"SetBQ24250InputEnable", &Firmware::SetBQ24250InputEnable},
       {"GetBQ24250Register", &Firmware::GetBQ24250Register},
+      {"SetBQ24161InputCurrent", &Firmware::SetBQ24161InputCurrent},
+      {"GetBQ24161Register", &Firmware::GetBQ24161Register},
       {"TestPMIC", &Firmware::TestPMIC},
       {"CheckFaults", &Firmware::CheckFaults},
       {"SetWatchdogPeriod", &Firmware::SetWatchdogPeriod},
@@ -99,6 +107,8 @@ public:
       uint8_t unInputChar = '\0';
       bool bParseCommand = false;
       unWatchdogPeriod = 0;
+
+      CUSBInterfaceSystem cUSBInterfaceSystem;
       
       fprintf(m_psIOFile, "Booted\r\n");
       for(;;) {
@@ -165,9 +175,12 @@ public:
             }
          }
          if(unWatchdogPeriod != 0 && (Timer::instance().millis() - unLastReset) > unWatchdogPeriod) {
-            //HardwareSerial::instance().write("\rResetting Watchdog\r\n");
-            //cBQ24250Controller.ResetWatchdogTimer();
-            HardwareSerial::instance().write('\r'); ReadEncoders("");
+            HardwareSerial::instance().write('\r');
+            HardwareSerial::instance().write("Resetting Watchdog\r\n");
+            cBQ24161Controller.ResetWatchdogTimer();
+            Timer::instance().delay(10);
+            TestPMIC("BQ24161");
+            //ReadEncoders("");
             unLastReset = Timer::instance().millis();
             HardwareSerial::instance().write("\r\n");
             for(uint8_t unIdx = 0; unIdx < unInputBufferIdx; unIdx++) {

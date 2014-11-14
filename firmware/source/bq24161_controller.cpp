@@ -1,7 +1,6 @@
 
 #include "bq24161_controller.h"
 
-#include <stdint.h>
 #include <HardwareSerial.h>
 
 #include "tw_controller.h"
@@ -16,6 +15,81 @@
 #define USB_STAT_MASK 0x30
 #define BATT_STAT_MASK 0x06
 
+#define R0_WDT_RST_MASK 0x80
+
+#define R2_RST_MASK 0x80
+#define R2_USB_INPUT_LIMIT_MASK 0x70
+
+
+void CBQ24161Controller::ResetWatchdogTimer() {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(0x00);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+unRegVal |= R0_WDT_RST_MASK;
+
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(0x00);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+
+}
+
+void CBQ24161Controller::DumpRegister(uint8_t un_addr) {
+   HardwareSerial::instance().write("Register(");
+   HardwareSerial::instance().write('0' + un_addr);
+   HardwareSerial::instance().write(")\r\n");
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(un_addr);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+   CTWController::GetInstance().Read();
+}
+
+void CBQ24161Controller::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(0x02);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+/* clear the reset bit, always set on read */
+unRegVal &= ~R2_RST_MASK;
+/* clear the USB input limit bits */
+unRegVal &= ~R2_USB_INPUT_LIMIT_MASK;
+
+   switch(e_usb_input_limit) {
+ case EUSBInputLimit::L100:
+unRegVal |= (0 << 4);
+      break;
+ case EUSBInputLimit::L150:
+unRegVal |= (1 << 4);
+      break;
+ case EUSBInputLimit::L500:
+unRegVal |= (2 << 4);
+      break;
+ case EUSBInputLimit::L800:
+unRegVal |= (3 << 4);
+      break;
+ case EUSBInputLimit::L900:
+unRegVal |= (4 << 4);
+      break;
+ case EUSBInputLimit::L1500:
+unRegVal |= (5 << 4);
+      break;
+   }
+
+/* write back */
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(0x02);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+
+}
 
 void CBQ24161Controller::Synchronize() {
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);

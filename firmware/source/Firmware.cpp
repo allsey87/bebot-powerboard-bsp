@@ -118,10 +118,6 @@ void Firmware::SetMotor(void (CDifferentialDriveController::*pf_set_motor)
          }
       }
    }
-
-
-   
-
    if(!bInputValid) {
       cDifferentialDriveController.Disable();
       fprintf(m_psIOFile, INVALID_PARAM);
@@ -243,13 +239,85 @@ void Firmware::SetBQ24250InputEnable(const char* pun_args) {
    }
 }
 
-void Firmware::SetBQ24250InputCurrent(const char* pun_args) {
-   if(pun_args != NULL && strstr(pun_args, "100") != NULL) {
-      cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L100);
+
+void Firmware::SetBQ24161InputCurrent(const char* pun_args) {
+   bool bInputValid = false;
+   uint16_t unVal;
+   if(pun_args != NULL) {
+      sscanf(pun_args, "%u", &unVal);
+      bInputValid = true;
+      switch(unVal) {
+      case 100:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L100);
+         break;
+      case 150:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L150);
+         break;
+      case 500:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L500);
+         break;
+      case 800:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L900);
+         break;
+      case 900:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L900);
+         break;
+      case 1500:
+         cBQ24161Controller.SetUSBInputLimit(CBQ24161Controller::EUSBInputLimit::L1500);
+         break;
+      default:
+         bInputValid = false;
+         break;
+      }
+   }
+   /* report if the input was valid */
+   if(bInputValid) {
       fprintf(m_psIOFile, "BQ24250 Input Current %s\r\n", pun_args);
    }
-   else if(pun_args != NULL && strstr(pun_args, "HIZ") != NULL) {
-      cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::LHIZ);
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+
+void Firmware::SetBQ24250InputCurrent(const char* pun_args) {
+   bool bInputValid = false;
+   uint16_t unVal;
+   if(pun_args != NULL) {
+      if(strstr(pun_args, "HIZ") != NULL) {
+         cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::LHIZ);
+         bInputValid = true;
+      }
+      else {
+         sscanf(pun_args, "%u", &unVal);
+         bInputValid = true;
+         switch(unVal) {
+         case 100:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L100);
+            break;
+         case 150:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L150);
+            break;
+         case 500:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L500);
+            break;
+         case 900:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L900);
+            break;
+         case 1500:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L1500);
+            break;
+         case 2000:
+            cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L2000);
+            break;
+         default:
+            bInputValid = false;
+            break;
+         }
+      }
+   }
+   /* report if the input was valid */
+   if(bInputValid) {
       fprintf(m_psIOFile, "BQ24250 Input Current %s\r\n", pun_args);
    }
    else {
@@ -266,6 +334,17 @@ void Firmware::GetBQ24250Register(const char* pun_args) {
       fprintf(m_psIOFile, INVALID_PARAM);
    }
 }
+
+void Firmware::GetBQ24161Register(const char* pun_args) {
+   uint16_t unVal = 0;
+   if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0x07) {
+      cBQ24161Controller.DumpRegister(unVal);
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
 
 void Firmware::TestPMIC(const char* pun_args) {
    uint16_t unPartNum = 0;
