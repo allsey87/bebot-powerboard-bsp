@@ -187,10 +187,33 @@ public:
                HardwareSerial::instance().write(punInputBuffer[unIdx]);
             }
          }
+         if(HasSwitchGoneLow() == true) {
+            if(bGumstixBoardPowerOn == false) {
+               HardwareSerial::instance().write("Enabling Gumstix\r\n");
+               SetBQ24161InputCurrent("500");
+               SetWatchdogPeriod("10000");
+               SetSystemEnable("on");
+            }
+            else {
+               HardwareSerial::instance().write("Disabling Gumstix\r\n");
+               SetSystemEnable("off");
+               SetBQ24161InputCurrent("100");
+               SetWatchdogPeriod("0");
+            }
+            bGumstixBoardPowerOn = !bGumstixBoardPowerOn;
+         }
       }
       return 0;         
    }
-
+   
+   bool HasSwitchGoneLow() {
+      static uint8_t unPbSamples = 0;
+      unPbSamples <<= 1;
+      if((PINJ & 0x40) != 0) {
+         unPbSamples |= 0x01;
+      }
+      return (unPbSamples == 0x80); // 1000 0000      
+   }
 
    static Firmware& instance() {
       return _firmware;
@@ -210,9 +233,13 @@ private:
 
    Firmware() : 
       cLEDsCurrentController(MAX5419_LEDS_ADDR),
-      cMotorsCurrentController(MAX5419_MTRS_ADDR) {
+      cMotorsCurrentController(MAX5419_MTRS_ADDR),
+      bGumstixBoardPowerOn(false) {
       /* Enable interrupts */
-      sei();      
+      sei();
+
+      /* Enable pull up on the pb switch */
+      PORTJ |= 0x40;
    }
 
    FILE* m_psIOFile;
@@ -223,6 +250,8 @@ private:
 
    CMAX5419Controller cLEDsCurrentController;
    CMAX5419Controller cMotorsCurrentController;
+
+   bool bGumstixBoardPowerOn;
 
    CDifferentialDriveController cDifferentialDriveController;
 
