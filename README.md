@@ -1,6 +1,4 @@
 bebot-powerboard-bsp
 ====================
 
-Toolchain, bootloader and firmware for the ATMega2560 processor on the BeBot Powerboard
-
-This repository uses CMake to fetch and build a known working version of the AVR toolchain, build the bootloader for the ATMega2560 and build the firmware image to support the hardware on the BeBot Powerboard PCB.
+This repository contains the source for the two firmware images on the bebot-powerboard-bsp. The bebot-powerboard-bsp is a dual ATMega328P design, with one microcontroller responsible for power management and charging (always on), and a second microcontroller for sensing and actuating the base.

@@ -1,4 +1,0 @@
-SetSystemEnable on
-SetMotorsEnable on
-SetMotorsMaxCurrent 0xE0
-SetWatchdogPeriod 500

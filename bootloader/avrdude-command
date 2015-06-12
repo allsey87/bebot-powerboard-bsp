@@ -1,1 +1,0 @@
-avrdude -c buspirate -p m2560 -P /dev/ttyUSB3 -e -U lock:w:0x3F:m -U efuse:w:0xFD:m -U hfuse:w:0xD8:m -U lfuse:w:0xFF:m -U flash:w:stk500boot.hex -U lock:w:0x0F:m
