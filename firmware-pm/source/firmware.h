@@ -13,9 +13,16 @@
 #include <stdlib.h>
 
 /* Firmware Headers */
+#include <bq24161_controller.h>
+#include <bq24250_controller.h>
 #include <huart_controller.h>
 #include <tw_controller.h>
 #include <timer.h>
+
+#define PIN_ACTUATORS_EN 0x80
+#define PIN_SYSTEM_EN 0x10
+#define PIN_BQ24250_INPUT_EN 0x40
+#define PIN_VUSB50_L500_EN 0x20
 
 class Firmware {
 public:
@@ -37,37 +44,17 @@ public:
       return m_cHUARTController;
    }
 
+   CTWController& GetTWController() {
+      return m_cTWController;
+   }
+
    CTimer& GetTimer() {
       return m_cTimer;
    }
 
-   int Exec() {
-      uint8_t unInput = 0;
-      
-      fprintf(m_psHUART, "Ready>\r\n");
+   int Exec();
 
-      for(;;) {
-         if(Firmware::GetInstance().GetHUARTController().Available()) {
-            unInput = Firmware::GetInstance().GetHUARTController().Read();
-            /* flush */
-            while(Firmware::GetInstance().GetHUARTController().Available()) {
-               Firmware::GetInstance().GetHUARTController().Read();
-            }
-         }
-         else {
-            unInput = 0;
-         }
-
-         switch(unInput) {
-         case 'u':
-            fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
-            break;
-         default:
-            break;
-         }
-      }
-      return 0;
-   }
+   void TestPMICs();
       
 private:
 
@@ -90,6 +77,9 @@ private:
    }
    
    CTimer m_cTimer;
+
+   CBQ24161Controller cBQ24161Controller;
+   CBQ24250Controller cBQ24250Controller;
 
    /* ATMega328P Controllers */
    /* TODO remove singleton and reference from HUART */
