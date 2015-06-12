@@ -18,6 +18,7 @@
 #define R1_ILIMIT_MASK 0x70
 #define R1_HIZ_MASK 0x01
 #define R1_RST_MASK 0x80
+#define R1_CHGEN_MASK 0x02
 
 void CBQ24250Controller::DumpRegister(uint8_t un_addr) {
    HardwareSerial::instance().write("Register(");
@@ -143,6 +144,28 @@ void CBQ24250Controller::ResetWatchdogTimer() {
    CTWController::GetInstance().Read();
 }
 
+
+void CBQ24250Controller::EnableCharging() {
+   CTWController::GetInstance().BeginTransmission(BQ24250_ADDR);
+   CTWController::GetInstance().Write(0x01);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24250_ADDR, 1, true);
+
+   uint8_t unRegister = CTWController::GetInstance().Read();
+
+   /* assure reset is clear */
+   unRegister &= ~R1_RST_MASK;
+
+   /* enable charging */
+   unRegister &= ~R1_CHGEN_MASK;
+
+   /* write back */
+   CTWController::GetInstance().BeginTransmission(BQ24250_ADDR);
+   CTWController::GetInstance().Write(0x01);
+   CTWController::GetInstance().Write(unRegister);
+   CTWController::GetInstance().EndTransmission(true);
+
+}
 
 void CBQ24250Controller::Synchronize() {
    CTWController::GetInstance().BeginTransmission(BQ24250_ADDR);

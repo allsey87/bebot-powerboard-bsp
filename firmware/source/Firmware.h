@@ -63,12 +63,18 @@ public:
    void SetLEDsEnable(const char* pun_args);
    void SetMotorsEnable(const char* pun_args);
    void SetSystemEnable(const char* pun_args);
+   void SetUSBSystemEnable(const char* pun_args);
    void SetBQ24250VDPMTo4V2(const char* pun_args);
    void SetBQ24250InputCurrent(const char* pun_args);
    void SetBQ24250InputEnable(const char* pun_args);
    void GetBQ24250Register(const char* pun_args);
    void SetBQ24161InputCurrent(const char* pun_args);
    void GetBQ24161Register(const char* pun_args);
+   void SetBQ24161ChgTermEn(const char* pun_args);
+   void SetBQ24161UsbLock(const char* pun_args);
+   void SetBQ24250ChgEn(const char* pun_args);
+   void SetBQ24161ChgEn(const char* pun_args);
+   void SetBQ24161NoBattOp(const char* pun_args);
    void TestPMIC(const char* pun_args);  
    void CheckFaults(const char* pun_args);
    void SetWatchdogPeriod(const char* pun_args);
@@ -76,7 +82,7 @@ public:
    struct SCommand {
       char Label[INPUT_BUFFER_LENGTH];
       void (Firmware::*Method)(const char* pun_args);
-   } psCommands[18] {
+   } psCommands[24] {
       {"ReadEncoders", &Firmware::ReadEncoders},
       {"SetMotors", &Firmware::SetMotors},
       {"SetLEDsMaxCurrent", &Firmware::SetLEDsMaxCurrent},
@@ -85,12 +91,18 @@ public:
       {"SetLEDsEnable", &Firmware::SetLEDsEnable},
       {"SetMotorsEnable", &Firmware::SetMotorsEnable},
       {"SetSystemEnable", &Firmware::SetSystemEnable},
+      {"SetUSBSystemEnable", &Firmware::SetUSBSystemEnable},
       {"SetBQ24250VDPMTo4V2", &Firmware::SetBQ24250VDPMTo4V2},
       {"SetBQ24250InputCurrent", &Firmware::SetBQ24250InputCurrent},
       {"SetBQ24250InputEnable", &Firmware::SetBQ24250InputEnable},
       {"GetBQ24250Register", &Firmware::GetBQ24250Register},
       {"SetBQ24161InputCurrent", &Firmware::SetBQ24161InputCurrent},
       {"GetBQ24161Register", &Firmware::GetBQ24161Register},
+      {"SetBQ24161ChgTermEn", &Firmware::SetBQ24161ChgTermEn},
+      {"SetBQ24161UsbLock", &Firmware::SetBQ24161UsbLock},
+      {"SetBQ24250ChgEn", &Firmware::SetBQ24250ChgEn},
+      {"SetBQ24161ChgEn", &Firmware::SetBQ24161ChgEn},
+      {"SetBQ24161NoBattOp", &Firmware::SetBQ24161NoBattOp},
       {"TestPMIC", &Firmware::TestPMIC},
       {"CheckFaults", &Firmware::CheckFaults},
       {"SetWatchdogPeriod", &Firmware::SetWatchdogPeriod},
@@ -107,8 +119,6 @@ public:
       uint8_t unInputChar = '\0';
       bool bParseCommand = false;
       unWatchdogPeriod = 0;
-
-      CUSBInterfaceSystem cUSBInterfaceSystem;
       
       fprintf(m_psIOFile, "Booted\r\n");
       for(;;) {
@@ -178,8 +188,10 @@ public:
             HardwareSerial::instance().write('\r');
             HardwareSerial::instance().write("Resetting Watchdog\r\n");
             cBQ24161Controller.ResetWatchdogTimer();
+            cBQ24250Controller.ResetWatchdogTimer();
             Timer::instance().delay(10);
             TestPMIC("BQ24161");
+            TestPMIC("BQ24250");
             //ReadEncoders("");
             unLastReset = Timer::instance().millis();
             HardwareSerial::instance().write("\r\n");
@@ -244,6 +256,8 @@ private:
 
    FILE* m_psIOFile;
    uint16_t unWatchdogPeriod;
+
+   CUSBInterfaceSystem cUSBInterfaceSystem;
 
    CBQ24161Controller cBQ24161Controller;
    CBQ24250Controller cBQ24250Controller;

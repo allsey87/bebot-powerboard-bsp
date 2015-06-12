@@ -40,7 +40,10 @@ public:
       LHIZ
    };
 
+
+   void EnableCharging();
    void SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit);
+   
    void DumpRegister(uint8_t un_addr);
 
    void SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint8_t un_value);

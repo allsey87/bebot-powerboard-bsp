@@ -9,6 +9,14 @@
 
 #define BQ24161_ADDR 0x6B
 
+// TODO move these defines to the base tw class
+#define R0_ADDR 0x00
+#define R1_ADDR 0x01
+#define R2_ADDR 0x02
+#define R3_ADDR 0x03
+#define R4_ADDR 0x04
+#define R5_ADDR 0x05
+
 #define STAT_MASK 0x70
 #define FAULT_MASK 0x07
 #define ADAPTER_STAT_MASK 0xC0
@@ -17,22 +25,28 @@
 
 #define R0_WDT_RST_MASK 0x80
 
+#define R1_NOBATT_OP_MASK 0x01
+#define R1_OTG_LOCKOUT_MASK 0x08
+
 #define R2_RST_MASK 0x80
 #define R2_USB_INPUT_LIMIT_MASK 0x70
+#define R2_CHG_EN_MASK 0x02
+#define R2_TERM_EN_MASK 0x04
+
 
 
 void CBQ24161Controller::ResetWatchdogTimer() {
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
-   CTWController::GetInstance().Write(0x00);
+   CTWController::GetInstance().Write(R0_ADDR);
    CTWController::GetInstance().EndTransmission(false);
    CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
 
    uint8_t unRegVal = CTWController::GetInstance().Read();
 
-unRegVal |= R0_WDT_RST_MASK;
+   unRegVal |= R0_WDT_RST_MASK;
 
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
-   CTWController::GetInstance().Write(0x00);
+   CTWController::GetInstance().Write(R0_ADDR);
    CTWController::GetInstance().Write(unRegVal);
    CTWController::GetInstance().EndTransmission(true);
 
@@ -51,45 +65,134 @@ void CBQ24161Controller::DumpRegister(uint8_t un_addr) {
 
 void CBQ24161Controller::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
-   CTWController::GetInstance().Write(0x02);
+   CTWController::GetInstance().Write(R2_ADDR);
    CTWController::GetInstance().EndTransmission(false);
    CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
 
    uint8_t unRegVal = CTWController::GetInstance().Read();
 
-/* clear the reset bit, always set on read */
-unRegVal &= ~R2_RST_MASK;
-/* clear the USB input limit bits */
-unRegVal &= ~R2_USB_INPUT_LIMIT_MASK;
+   /* clear the reset bit, always set on read */
+   unRegVal &= ~R2_RST_MASK;
+   /* clear the USB input limit bits */
+   unRegVal &= ~R2_USB_INPUT_LIMIT_MASK;
 
    switch(e_usb_input_limit) {
- case EUSBInputLimit::L100:
-unRegVal |= (0 << 4);
+   case EUSBInputLimit::L100:
+      unRegVal |= (0 << 4);
       break;
- case EUSBInputLimit::L150:
-unRegVal |= (1 << 4);
+   case EUSBInputLimit::L150:
+      unRegVal |= (1 << 4);
       break;
- case EUSBInputLimit::L500:
-unRegVal |= (2 << 4);
+   case EUSBInputLimit::L500:
+      unRegVal |= (2 << 4);
       break;
- case EUSBInputLimit::L800:
-unRegVal |= (3 << 4);
+   case EUSBInputLimit::L800:
+      unRegVal |= (3 << 4);
       break;
- case EUSBInputLimit::L900:
-unRegVal |= (4 << 4);
+   case EUSBInputLimit::L900:
+      unRegVal |= (4 << 4);
       break;
- case EUSBInputLimit::L1500:
-unRegVal |= (5 << 4);
+   case EUSBInputLimit::L1500:
+      unRegVal |= (5 << 4);
       break;
    }
 
-/* write back */
+   /* write back */
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
    CTWController::GetInstance().Write(0x02);
    CTWController::GetInstance().Write(unRegVal);
    CTWController::GetInstance().EndTransmission(true);
-
 }
+
+
+void CBQ24161Controller::SetChargeTerminationEnable(bool b_enable) {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R2_ADDR);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+   /* clear the reset bit, always set on read */
+   unRegVal &= ~R2_RST_MASK;
+   /* set the charge termination flag with respect to b_enable */
+   if(b_enable == true) {
+      unRegVal |= R2_TERM_EN_MASK; 
+   }
+   else {
+      unRegVal &= ~R2_TERM_EN_MASK;
+   }
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R2_ADDR);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+}
+
+void CBQ24161Controller::SetChargingEnable(bool b_enable) {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R2_ADDR);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+   /* clear the reset bit, always set on read */
+   unRegVal &= ~R2_RST_MASK;
+   /* set the charge enable flag with respect to b_enable */
+   if(b_enable == true) {
+      unRegVal &= ~R2_CHG_EN_MASK;
+   }
+   else {
+      unRegVal |= R2_CHG_EN_MASK;   
+   }
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R2_ADDR);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+}
+
+void CBQ24161Controller::SetNoBattOperationEnable(bool b_enable) {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R1_ADDR);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+   /* set the no battery operation flag with respect to b_enable */
+   if(b_enable == true) {
+      unRegVal |= R1_NOBATT_OP_MASK;
+   }
+   else {
+      unRegVal &= ~R1_NOBATT_OP_MASK;
+   }
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R1_ADDR);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+}
+
+void CBQ24161Controller::SetUSBLockoutEnable(bool b_enable) {
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R1_ADDR);
+   CTWController::GetInstance().EndTransmission(false);
+   CTWController::GetInstance().Read(BQ24161_ADDR, 1, true);
+
+   uint8_t unRegVal = CTWController::GetInstance().Read();
+
+   /* set the USB OTG lockout flag with respect to b_enable */
+   if(b_enable == true) {
+      unRegVal |= R1_OTG_LOCKOUT_MASK;
+   }
+   else {
+      unRegVal &= ~R1_OTG_LOCKOUT_MASK;
+   }
+   CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);
+   CTWController::GetInstance().Write(R1_ADDR);
+   CTWController::GetInstance().Write(unRegVal);
+   CTWController::GetInstance().EndTransmission(true);
+}
+
 
 void CBQ24161Controller::Synchronize() {
    CTWController::GetInstance().BeginTransmission(BQ24161_ADDR);

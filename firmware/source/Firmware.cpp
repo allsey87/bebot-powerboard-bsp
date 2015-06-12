@@ -128,7 +128,6 @@ void Firmware::SetMotor(void (CDifferentialDriveController::*pf_set_motor)
    return;
 }
 
-
 void Firmware::SetLEDsMaxCurrent(const char* pun_args) {
    uint16_t unVal = 0;
    if(pun_args != NULL && sscanf(pun_args, "0x%x", &unVal) == 1 && unVal >= 0x00 && unVal <= 0xFF) {
@@ -212,6 +211,20 @@ void Firmware::SetSystemEnable(const char* pun_args) {
       DDRJ |= 0x80;
       PORTJ &= ~0x80;      
       fprintf(m_psIOFile, "System Enable OFF\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetUSBSystemEnable(const char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      cUSBInterfaceSystem.Enable();
+      fprintf(m_psIOFile, "USB System ON\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      cUSBInterfaceSystem.Disable();
+      fprintf(m_psIOFile, "USB System OFF\r\n");
    }
    else {
       fprintf(m_psIOFile, INVALID_PARAM);
@@ -344,6 +357,67 @@ void Firmware::GetBQ24161Register(const char* pun_args) {
       fprintf(m_psIOFile, INVALID_PARAM);
    }
 }
+
+void Firmware::SetBQ24161ChgTermEn(const char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      cBQ24161Controller.SetChargeTerminationEnable(true);
+      fprintf(m_psIOFile, "Charge Termination Enabled\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      cBQ24161Controller.SetChargeTerminationEnable(false);
+      fprintf(m_psIOFile, "Charge Termination Disabled\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetBQ24161UsbLock(const char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      cBQ24161Controller.SetUSBLockoutEnable(true);
+      fprintf(m_psIOFile, "USB Lockout Enabled\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      cBQ24161Controller.SetUSBLockoutEnable(false);
+      fprintf(m_psIOFile, "USB Lockout Disabled\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetBQ24250ChgEn(const char* pun_args) {
+   cBQ24250Controller.EnableCharging();
+}
+
+void Firmware::SetBQ24161ChgEn(const char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      cBQ24161Controller.SetChargingEnable(true);
+      fprintf(m_psIOFile, "Charging Enabled\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      cBQ24161Controller.SetChargingEnable(false);
+      fprintf(m_psIOFile, "Charging Disabled\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
+void Firmware::SetBQ24161NoBattOp(const char* pun_args) {
+   if(pun_args != NULL && strstr(pun_args, "on") != NULL) {
+      cBQ24161Controller.SetNoBattOperationEnable(true);
+      fprintf(m_psIOFile, "No battery mode enabled\r\n");
+   }
+   else if(pun_args != NULL && strstr(pun_args, "off") != NULL) {
+      cBQ24161Controller.SetNoBattOperationEnable(false);
+      fprintf(m_psIOFile, "No battery mode disabled\r\n");
+   }
+   else {
+      fprintf(m_psIOFile, INVALID_PARAM);
+   }
+}
+
 
 
 void Firmware::TestPMIC(const char* pun_args) {

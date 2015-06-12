@@ -8,8 +8,11 @@
 
 class CUSBInterfaceSystem {
 public:
-   /* note, this constructor does tw ops - not suitable for static init */
    CUSBInterfaceSystem();
+
+   void Enable();
+
+   void Disable();
 
 private:
    CMCP23008Module cMCP23008Module;

@@ -27,14 +27,17 @@ CUSBInterfaceSystem::CUSBInterfaceSystem() :
    /* Pull the reset signal high and pull up the interrupt signal */
    PORTD |= (RST_PIN | IRQ_PIN);
    DDRD |= RST_PIN;
+}
 
+void CUSBInterfaceSystem::Enable() {
    /* Set up the power and configuration GPIO port */
    /* drive the two-wire pull resistors high, other outputs are low */
    uint8_t unPort = TW_SDA_PU | TW_SCL_PU;
    cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
    /* set the direction bits for the outputs to override the pull up resistors*/
-   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::DIRECTION, 
-                               ~(CFG_STRAP1 | CFG_STRAP2 | TW_SDA_PU | TW_SCL_PU | TW_INT_EN | RST));
+   uint8_t unOutputs = CFG_STRAP1 | CFG_STRAP2 | TW_SDA_PU | TW_SCL_PU | TW_INT_EN | RST;
+   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::DIRECTION, ~unOutputs);
+
    /* enable the two-wire interface */
    unPort |= TW_INT_EN;
    cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
@@ -44,3 +47,10 @@ CUSBInterfaceSystem::CUSBInterfaceSystem() :
    /* Configure the USB2532 */
    cUSB2532Module.Init();
 }
+
+void CUSBInterfaceSystem::Disable() {
+   /* leave the TW lines pulled up, but disconnect from the bus and assert reset */
+   uint8_t unPort = TW_SDA_PU | TW_SCL_PU;
+   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
+}
+
