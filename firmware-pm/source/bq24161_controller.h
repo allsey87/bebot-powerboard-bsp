@@ -68,13 +68,15 @@ public:
 
    void SetUSBInputLimit(EUSBInputLimit e_usb_input_limit);
 
-   void SetChargeTerminationEnable(bool b_enable);
-
    void SetChargingEnable(bool b_enable);
 
    void SetNoBattOperationEnable(bool b_enable);
 
-   void SetUSBLockoutEnable(bool b_enable);
+   void SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv);
+
+   void SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma);
+
+   void SetBatteryTerminationCurrent(uint16_t un_batt_term_current_ma);
 
    void ResetWatchdogTimer();
 

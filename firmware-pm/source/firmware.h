@@ -15,6 +15,8 @@
 /* Firmware Headers */
 #include <bq24161_controller.h>
 #include <bq24250_controller.h>
+#include <pca9633_module.h>
+#include <usb_interface_system.h>
 #include <huart_controller.h>
 #include <tw_controller.h>
 #include <timer.h>
@@ -70,7 +72,9 @@ private:
                TCNT2,
                TIMER2_OVF_vect_num),
       m_cHUARTController(HardwareSerial::instance()),
-      m_cTWController(CTWController::GetInstance()) {     
+      m_cTWController(CTWController::GetInstance()),
+      m_cPowerSourceStatusLEDs(0x60),
+      m_cBatteryStatusLEDs(0x61) {     
 
       /* Enable interrupts */
       sei();
@@ -78,15 +82,20 @@ private:
    
    CTimer m_cTimer;
 
-   CBQ24161Controller cBQ24161Controller;
-   CBQ24250Controller cBQ24250Controller;
-
    /* ATMega328P Controllers */
    /* TODO remove singleton and reference from HUART */
    //CHUARTController& m_cHUARTController;
    HardwareSerial& m_cHUARTController;
  
    CTWController& m_cTWController;
+
+   CBQ24161Controller m_cBQ24161Controller;
+   CBQ24250Controller m_cBQ24250Controller;
+
+   CPCA9633Module m_cPowerSourceStatusLEDs;
+   CPCA9633Module m_cBatteryStatusLEDs;
+
+   CUSBInterfaceSystem m_cUSBInterfaceSystem;
 
    static Firmware _firmware;
 

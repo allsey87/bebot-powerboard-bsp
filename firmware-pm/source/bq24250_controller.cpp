@@ -121,12 +121,9 @@ void CBQ24250Controller::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLi
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 
    //DEBUG
-
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x01);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
-   unRegister = Firmware::GetInstance().GetTWController().Read();
+   DumpRegister(0x00); DumpRegister(0x01);
+   DumpRegister(0x00); DumpRegister(0x01);
+   DumpRegister(0x00); DumpRegister(0x01);
 }
 
 

@@ -31,6 +31,14 @@
 #define R2_CHG_EN_MASK 0x02
 #define R2_TERM_EN_MASK 0x04
 
+#define TERM_CURRENT_BASE 50
+#define TERM_CURRENT_OFFSET 50
+#define CHRG_CURRENT_BASE 75
+#define CHRG_CURRENT_OFFSET 550
+#define REG_VOLTAGE_BASE 20
+#define REG_VOLTAGE_OFFSET 3500
+
+
 void CBQ24161Controller::ResetWatchdogTimer() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R0_ADDR);
@@ -100,30 +108,6 @@ void CBQ24161Controller::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-
-void CBQ24161Controller::SetChargeTerminationEnable(bool b_enable) {
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
-   Firmware::GetInstance().GetTWController().Write(R2_ADDR);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
-
-   uint8_t unRegVal = Firmware::GetInstance().GetTWController().Read();
-
-   /* clear the reset bit, always set on read */
-   unRegVal &= ~R2_RST_MASK;
-   /* set the charge termination flag with respect to b_enable */
-   if(b_enable == true) {
-      unRegVal |= R2_TERM_EN_MASK; 
-   }
-   else {
-      unRegVal &= ~R2_TERM_EN_MASK;
-   }
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
-   Firmware::GetInstance().GetTWController().Write(R2_ADDR);
-   Firmware::GetInstance().GetTWController().Write(unRegVal);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
-}
-
 void CBQ24161Controller::SetChargingEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R2_ADDR);
@@ -168,23 +152,98 @@ void CBQ24161Controller::SetNoBattOperationEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetUSBLockoutEnable(bool b_enable) {
+void CBQ24161Controller::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv) {
+   /* check if the requested voltage is in range */
+   if(un_batt_voltage_mv < REG_VOLTAGE_OFFSET || 
+      un_batt_voltage_mv > 4440)
+      return;
+
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
-   Firmware::GetInstance().GetTWController().Write(R1_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R3_ADDR);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
    Firmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
-
-   uint8_t unRegVal = Firmware::GetInstance().GetTWController().Read();
-
-   /* set the USB OTG lockout flag with respect to b_enable */
-   if(b_enable == true) {
-      unRegVal |= R1_OTG_LOCKOUT_MASK;
+   uint8_t unRegVal = Firmware::GetInstance().GetTWController().Read();          
+   /* decrement by the internal offset voltage */
+   un_batt_voltage_mv -= REG_VOLTAGE_OFFSET;
+   /* loop over the different increments to determine register programming */
+   for(uint16_t unIdx = 0; unIdx < 6; unIdx++) {
+      uint16_t unInc = (1 << (5 - unIdx)) * REG_VOLTAGE_BASE;
+      /* set/clear the register bits for the current increment */
+      if(un_batt_voltage_mv / unInc > 0) {
+         un_batt_voltage_mv -= unInc;
+         unRegVal |= (1 << ((5 - unIdx) + 2));
+      }
+      else {
+         unRegVal &= ~(1 << ((5 - unIdx) + 2));
+      }
    }
-   else {
-      unRegVal &= ~R1_OTG_LOCKOUT_MASK;
-   }
+   /* Write value back to register */
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
-   Firmware::GetInstance().GetTWController().Write(R1_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R3_ADDR);
+   Firmware::GetInstance().GetTWController().Write(unRegVal);
+   Firmware::GetInstance().GetTWController().EndTransmission(true);
+}
+
+void CBQ24161Controller::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma) {
+   /* check if the requested current is in range */
+   if(un_batt_chrg_current_ma < CHRG_CURRENT_OFFSET ||
+      un_batt_chrg_current_ma > 2875)
+      return;
+
+   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R5_ADDR);
+   Firmware::GetInstance().GetTWController().EndTransmission(false);
+   Firmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
+   uint8_t unRegVal = Firmware::GetInstance().GetTWController().Read();          
+   /* decrement by the internal offset current */
+   un_batt_chrg_current_ma -= CHRG_CURRENT_OFFSET;
+   /* loop over the different increments to determine register programming */
+   for(uint16_t unIdx = 0; unIdx < 5; unIdx++) {
+      uint16_t unInc = (1 << (4 - unIdx)) * CHRG_CURRENT_BASE;
+      /* set/clear the register bits for the current increment */
+      if(un_batt_chrg_current_ma / unInc > 0) {
+         un_batt_chrg_current_ma -= unInc;
+         unRegVal |= (1 << ((4 - unIdx) + 3));
+      }
+      else {
+         unRegVal &= ~(1 << ((4 - unIdx) + 3));
+      }
+   }
+   /* Write value back to register */
+   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R5_ADDR);
+   Firmware::GetInstance().GetTWController().Write(unRegVal);
+   Firmware::GetInstance().GetTWController().EndTransmission(true);
+}
+
+void CBQ24161Controller::SetBatteryTerminationCurrent(uint16_t un_batt_term_current_ma) {
+   /* check if the requested current is in range */
+   if(un_batt_term_current_ma < TERM_CURRENT_OFFSET || 
+      un_batt_term_current_ma > 2875)
+      return;
+
+   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R5_ADDR);
+   Firmware::GetInstance().GetTWController().EndTransmission(false);
+   Firmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
+   uint8_t unRegVal = Firmware::GetInstance().GetTWController().Read();          
+   /* decrement by the internal offset current */
+   un_batt_term_current_ma -= TERM_CURRENT_OFFSET;
+   /* loop over the different increments to determine register programming */
+   for(uint16_t unIdx = 0; unIdx < 3; unIdx++) {
+      uint16_t unInc = (1 << (2 - unIdx)) * TERM_CURRENT_BASE;
+      /* set/clear the register bits for the current increment */
+      if(un_batt_term_current_ma / unInc > 0) {
+         un_batt_term_current_ma -= unInc;
+         unRegVal |= (1 << (2 - unIdx));
+      }
+      else {
+         unRegVal &= ~(1 << (2 - unIdx));
+      }
+   }
+   /* Write value back to register */
+   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
+   Firmware::GetInstance().GetTWController().Write(R5_ADDR);
    Firmware::GetInstance().GetTWController().Write(unRegVal);
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }

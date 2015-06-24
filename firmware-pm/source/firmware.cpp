@@ -1,5 +1,37 @@
 #include "firmware.h"
 
+/***********************************************************/
+/***********************************************************/
+
+#define UIS_EN_PIN  0x01
+#define UIS_NRST_PIN 0x02
+
+/***********************************************************/
+/***********************************************************/
+
+#define SYS_BATT_REG_VOLTAGE 4200
+#define SYS_BATT_CHG_CURRENT 740
+#define SYS_BATT_TRM_CURRENT 50
+
+#define ACT_BATT_REG_VOLTAGE
+#define ACT_BATT_CHG_CURRENT
+#define ACT_BATT_TRM_CURRENT
+
+#define SYNC_PERIOD 10000
+
+/***********************************************************/
+/***********************************************************/
+
+#define ADP_LED_INDEX 0
+#define USB_LP_LED_INDEX 1
+#define USB_FP_LED_INDEX 2
+#define USB_HP_LED_INDEX 3
+
+#define BATT1_STAT_INDEX 0
+#define BATT1_CHRG_INDEX 1
+#define BATT2_STAT_INDEX 2
+#define BATT2_CHRG_INDEX 3
+
 /* initialisation of the static singleton */
 Firmware Firmware::_firmware;
 
@@ -31,6 +63,7 @@ int main(void)
 
 int Firmware::Exec() 
 {
+   uint32_t unLastSyncTime = 0;
    uint8_t unInput = 0;
 
    /* Set default values */
@@ -38,10 +71,41 @@ int Firmware::Exec()
    PORTD |= (PIN_SYSTEM_EN);
    /* set as outputs */
    DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN | PIN_BQ24250_INPUT_EN | PIN_VUSB50_L500_EN); 
-      
+
+   PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN); 
+   DDRB |= UIS_NRST_PIN | UIS_EN_PIN;
+
+   m_cBQ24161Controller.SetBatteryRegulationVoltage(SYS_BATT_REG_VOLTAGE);
+   m_cBQ24161Controller.SetBatteryChargingCurrent(SYS_BATT_CHG_CURRENT);
+   m_cBQ24161Controller.SetBatteryTerminationCurrent(SYS_BATT_TRM_CURRENT);
+
+   CPCA9633Module::ResetDevices();
+   m_cPowerSourceStatusLEDs.Init();
+   m_cBatteryStatusLEDs.Init();
+
    fprintf(m_psHUART, "Ready> ");
 
    for(;;) {
+      /* Update watchdogs */
+      if(GetTimer().GetMilliseconds() - unLastSyncTime > SYNC_PERIOD) {
+         /* Update last sync time variable */
+         unLastSyncTime = GetTimer().GetMilliseconds();
+         /* Reset the watchdogs and sync with the power controllers */
+         m_cBQ24161Controller.ResetWatchdogTimer();
+         m_cBQ24161Controller.Synchronize();
+         m_cBQ24250Controller.ResetWatchdogTimer();
+         m_cBQ24250Controller.Synchronize();
+
+         if(m_cBQ24161Controller.GetBatteryState() != CBQ24161Controller::EBatteryState::NORMAL ||
+            m_cBQ24161Controller.GetFault() == CBQ24161Controller::EFault::BATT_FAULT ||
+            m_cBQ24161Controller.GetFault() == CBQ24161Controller::EFault::BATT_THERMAL_SHDN) {
+            
+            m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
+            m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+         }
+      }
+      
+      /* check for input command */
       if(Firmware::GetInstance().GetHUARTController().Available()) {
          unInput = Firmware::GetInstance().GetHUARTController().Read();
          /* flush */
@@ -53,6 +117,7 @@ int Firmware::Exec()
          unInput = 0;
       }
 
+      /* process input command */
       if(unInput != 0) {
          fprintf(m_psHUART, "\r\n");
          switch(unInput) {
@@ -65,11 +130,11 @@ int Firmware::Exec()
          case 'd':
             fprintf(m_psHUART, "BQ24161\r\n");
             for(uint8_t i = 0; i < 2; i++) {
-               cBQ24161Controller.DumpRegister(i);
+               m_cBQ24161Controller.DumpRegister(i);
             }
             fprintf(m_psHUART, "BQ24250\r\n");
             for(uint8_t i = 0; i < 2; i++) {
-               cBQ24250Controller.DumpRegister(i);
+               m_cBQ24250Controller.DumpRegister(i);
             }
             break;
          case 'a':
@@ -102,6 +167,31 @@ int Firmware::Exec()
                fprintf(m_psHUART, "BQ24250 input on\r\n");
             }
             break;
+         case 'F':
+            m_cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::L900);
+            break;
+         case 'f':
+            m_cBQ24250Controller.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::LHIZ);
+            break;
+         case 'e':
+            m_cUSBInterfaceSystem.Disable();
+            PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN);
+            break;
+         case 'E':
+            PORTB |= (UIS_EN_PIN);
+            GetTimer().Delay(100);
+            PORTB |= (UIS_NRST_PIN);
+            GetTimer().Delay(100);
+            m_cUSBInterfaceSystem.Enable();
+            GetTimer().Delay(100);
+            /*
+            for(uint8_t addr = 0x01; addr < 0x7F; addr++) {
+               GetTWController().BeginTransmission(addr);
+               uint8_t err = GetTWController().EndTransmission(addr);
+               fprintf(m_psHUART, "0x%02x: %d\r\n", addr, err);
+            }
+            */
+            break;
          default:
             break;
          }
@@ -115,10 +205,10 @@ int Firmware::Exec()
 /***********************************************************/
 
 void Firmware::TestPMICs() {
-   cBQ24161Controller.Synchronize();
+   m_cBQ24161Controller.Synchronize();
    fprintf(m_psHUART, "<BQ24161>");
    fprintf(m_psHUART, "\r\nstate: ");
-   switch(cBQ24161Controller.GetDeviceState()) {
+   switch(m_cBQ24161Controller.GetDeviceState()) {
    case CBQ24161Controller::EDeviceState::STANDBY:
       fprintf(m_psHUART, "standby");
       break;
@@ -136,7 +226,7 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\nfault: ");
-   switch(cBQ24161Controller.GetFault()) {
+   switch(m_cBQ24161Controller.GetFault()) {
    case CBQ24161Controller::EFault::NONE:
       fprintf(m_psHUART, "none");
       break;
@@ -163,7 +253,7 @@ void Firmware::TestPMICs() {
       break;
    }           
    fprintf(m_psHUART, "\r\nselected source: ");
-   switch(cBQ24161Controller.GetSelectedSource()) {
+   switch(m_cBQ24161Controller.GetSelectedSource()) {
    case CBQ24161Controller::ESource::NONE:
       fprintf(m_psHUART, "none");
       break;
@@ -175,7 +265,7 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\nadapter input: ");
-   switch(cBQ24161Controller.GetAdapterInputState()) {
+   switch(m_cBQ24161Controller.GetAdapterInputState()) {
    case CBQ24161Controller::EInputState::NORMAL:
       fprintf(m_psHUART, "normal");
       break;
@@ -190,7 +280,7 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\nusb input: ");
-   switch(cBQ24161Controller.GetUSBInputState()) {
+   switch(m_cBQ24161Controller.GetUSBInputState()) {
    case CBQ24161Controller::EInputState::NORMAL:
       fprintf(m_psHUART, "normal");
       break;
@@ -205,7 +295,7 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\nbattery_state: ");
-   switch(cBQ24161Controller.GetBatteryState()) {
+   switch(m_cBQ24161Controller.GetBatteryState()) {
    case CBQ24161Controller::EBatteryState::NORMAL:
       fprintf(m_psHUART, "normal");
       break;
@@ -220,10 +310,10 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\n");
-   cBQ24250Controller.Synchronize();
+   m_cBQ24250Controller.Synchronize();
    fprintf(m_psHUART, "<BQ24250>\r\n");
    fprintf(m_psHUART, "state: ");
-   switch(cBQ24250Controller.GetDeviceState()) {
+   switch(m_cBQ24250Controller.GetDeviceState()) {
    case CBQ24250Controller::EDeviceState::READY:
       fprintf(m_psHUART, "ready");
       break;
@@ -238,7 +328,7 @@ void Firmware::TestPMICs() {
       break;
    }
    fprintf(m_psHUART, "\r\nfault: ");
-   switch(cBQ24250Controller.GetFault()) {
+   switch(m_cBQ24250Controller.GetFault()) {
    case CBQ24250Controller::EFault::NONE:
       fprintf(m_psHUART, "none");
       break;
@@ -276,8 +366,8 @@ void Firmware::TestPMICs() {
       fprintf(m_psHUART, "undefined");
       break;
    }
-   fprintf(m_psHUART, "\r\nwatchdog enabled = %c", cBQ24250Controller.GetWatchdogEnabled()?'t':'f');
-   fprintf(m_psHUART, "\r\nwatchdog fault = %c", cBQ24250Controller.GetWatchdogFault()?'t':'f');
+   fprintf(m_psHUART, "\r\nwatchdog enabled = %c", m_cBQ24250Controller.GetWatchdogEnabled()?'t':'f');
+   fprintf(m_psHUART, "\r\nwatchdog fault = %c", m_cBQ24250Controller.GetWatchdogFault()?'t':'f');
 
    fprintf(m_psHUART, "\r\n");
 }
