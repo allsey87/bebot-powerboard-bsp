@@ -17,6 +17,8 @@
 #include <tw_controller.h>
 #include <timer.h>
 
+#include <differential_drive_system.h>
+
 class Firmware {
 public:
       
@@ -43,10 +45,17 @@ public:
 
    int Exec() {
       uint8_t unInput = 0;
+
+      CDifferentialDriveSystem::EMode eLeftDriveMode = 
+         CDifferentialDriveSystem::EMode::FORWARD_PWM_FD;
+      CDifferentialDriveSystem::EMode eRightDriveMode = 
+         CDifferentialDriveSystem::EMode::FORWARD_PWM_FD;
+      enum class EMotor { LEFT, RIGHT } eSelectedMotor = EMotor::RIGHT;
       
       fprintf(m_psHUART, "Ready>\r\n");
 
       for(;;) {
+         
          if(Firmware::GetInstance().GetHUARTController().Available()) {
             unInput = Firmware::GetInstance().GetHUARTController().Read();
             /* flush */
@@ -55,12 +64,31 @@ public:
             }
          }
          else {
-            unInput = 0;
+            unInput = 's';
          }
 
          switch(unInput) {
          case 'u':
             fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
+            break;
+         case 'E':
+            m_cDifferentialDriveSystem.Enable();
+            break;
+         case 'e':
+            m_cDifferentialDriveSystem.Disable();
+            break;
+         case 'l':
+            eSelectedMotor = EMotor::LEFT;
+            break;
+         case 'r':
+            eSelectedMotor = EMotor::RIGHT;
+            break;          
+         case 's':
+            m_cDifferentialDriveSystem.GetVelocity();
+            break;          
+         case '0' ... '9':
+            m_cDifferentialDriveSystem.SetTargetVelocity((unInput - '5') * 40, (unInput - '5') * 40);
+            //m_cDifferentialDriveSystem.ConfigureRightMotor(eRightDriveMode, 80 + (unInput - '0') * 5);
             break;
          default:
             break;
@@ -97,6 +125,8 @@ private:
    HardwareSerial& m_cHUARTController;
  
    CTWController& m_cTWController;
+
+   CDifferentialDriveSystem m_cDifferentialDriveSystem;
 
    static Firmware _firmware;
 

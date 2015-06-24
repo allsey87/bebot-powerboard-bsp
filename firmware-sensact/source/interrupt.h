@@ -16,7 +16,7 @@ private:
    // static void Handler01() __asm__("__vector_1") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler02() __asm__("__vector_2") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler03() __asm__("__vector_3") __attribute__((__signal__, __used__, __externally_visible__));
-   // static void Handler04() __asm__("__vector_4") __attribute__((__signal__, __used__, __externally_visible__));
+   static void Handler04() __asm__("__vector_4") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler05() __asm__("__vector_5") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler06() __asm__("__vector_6") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler07() __asm__("__vector_7") __attribute__((__signal__, __used__, __externally_visible__));
@@ -28,7 +28,7 @@ private:
    // static void Handler13() __asm__("__vector_13") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler14() __asm__("__vector_14") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler15() __asm__("__vector_15") __attribute__((__signal__, __used__, __externally_visible__));
-   // static void Handler16() __asm__("__vector_16") __attribute__((__signal__, __used__, __externally_visible__));
+   static void Handler16() __asm__("__vector_16") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler17() __asm__("__vector_17") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler18() __asm__("__vector_18") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler19() __asm__("__vector_19") __attribute__((__signal__, __used__, __externally_visible__));
