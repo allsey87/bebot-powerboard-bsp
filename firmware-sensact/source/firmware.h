@@ -44,10 +44,76 @@ public:
    }
 
    int Exec() {
-      //uint8_t unInput = 0;
+      enum class EMotor { LEFT, RIGHT } eSelectedMotor = EMotor::RIGHT;
+      CDifferentialDriveSystem::SVelocity sVelocity;
+      int16_t nLeftSpeed = 0, nRightSpeed = 0;
+      uint8_t unInput = 0;
+      for(;;) {
+         
+         if(Firmware::GetInstance().GetHUARTController().Available()) {
+            unInput = Firmware::GetInstance().GetHUARTController().Read();
+            /* flush */
+            while(Firmware::GetInstance().GetHUARTController().Available()) {
+               Firmware::GetInstance().GetHUARTController().Read();
+            }
+         }
+         else {
+            unInput = 0;
+         }
+         switch(unInput) {
+         case 'u':
+            fprintf(m_psHUART, "Uptime: %lums\r\n", m_cTimer.GetMilliseconds());
+            break;
+         case 'l':
+            fprintf(m_psHUART, "Selected Left\r\n");
+            eSelectedMotor = EMotor::LEFT;
+            break;
+         case 'r':
+            fprintf(m_psHUART, "Selected Right\r\n");
+            eSelectedMotor = EMotor::RIGHT;
+            break;          
+         case 'e':
+            fprintf(m_psHUART, "DDS Enabled\r\n");
+            m_cDifferentialDriveSystem.Enable();
+            break;
+         case '0':
+            fprintf(m_psHUART, "DDS Disabled\r\n");
+            m_cDifferentialDriveSystem.Disable();
+            break;
+         case '1' ... '9':
+            if(eSelectedMotor == EMotor::RIGHT) {
+               nRightSpeed = (unInput - '5') * 25;
+            }
+            else {
+               nLeftSpeed = (unInput - '5') * 25;
+            }
+            fprintf(m_psHUART, "Target: L:%d\tR:%d\r\n", nLeftSpeed, nRightSpeed);
+            m_cDifferentialDriveSystem.SetTargetVelocity(nLeftSpeed, nRightSpeed);
+            break;
+         case 's':
+            sVelocity = m_cDifferentialDriveSystem.GetVelocity();
+            fprintf(m_psHUART, 
+                    "L:%d\tR:%d\r\n", 
+                    sVelocity.Left, 
+                    sVelocity.Right);
+            break;
+         case 't':
+            fprintf(m_psHUART, "-- DDS Test Start --\r\n");
+            TestDriveSystem();
+            fprintf(m_psHUART, "-- DDS Test End --\r\n");
+            break;
 
+         default:
+            break;
+         }
+      }
+      
+
+      return 0;
+   }
+
+   void TestDriveSystem() {
       int16_t pnTestVelocities[] = {0, 40, 120, -80, 0};
-
       m_cDifferentialDriveSystem.Enable();
       for(int16_t nTargetVelocity : pnTestVelocities) {
          m_cDifferentialDriveSystem.SetTargetVelocity(nTargetVelocity, nTargetVelocity);
@@ -62,51 +128,6 @@ public:
          }
       }
       m_cDifferentialDriveSystem.Disable();
-
-      
-      // for(;;) {
-         
-      //    if(Firmware::GetInstance().GetHUARTController().Available()) {
-      //       unInput = Firmware::GetInstance().GetHUARTController().Read();
-      //       /* flush */
-      //       while(Firmware::GetInstance().GetHUARTController().Available()) {
-      //          Firmware::GetInstance().GetHUARTController().Read();
-      //       }
-      //    }
-      //    else {
-      //       unInput = 's';
-      //    }
-
-      //    switch(unInput) {
-      //    case 'u':
-      //       fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
-      //       break;
-      //    case 'E':
-      //       m_cDifferentialDriveSystem.Enable();
-      //       break;
-      //    case 'e':
-      //       m_cDifferentialDriveSystem.Disable();
-      //       break;
-      //    case 'l':
-      //       eSelectedMotor = EMotor::LEFT;
-      //       break;
-      //    case 'r':
-      //       eSelectedMotor = EMotor::RIGHT;
-      //       break;          
-      //    case 's':
-      //       m_cDifferentialDriveSystem.GetVelocity();
-      //       break;          
-      //    case '0' ... '9':
-      //       m_cDifferentialDriveSystem.SetTargetVelocity((unInput - '5') * 40, (unInput - '5') * 40);
-      //       //m_cDifferentialDriveSystem.ConfigureRightMotor(eRightDriveMode, 80 + (unInput - '0') * 5);
-      //       break;
-      //    default:
-      //       break;
-      //    }
-      // }
-      
-
-      return 0;
    }
       
 private:
