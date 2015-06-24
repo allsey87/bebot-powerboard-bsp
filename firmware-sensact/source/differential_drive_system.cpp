@@ -69,21 +69,14 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
 /****************************************/
 /****************************************/
 
-void CDifferentialDriveSystem::GetVelocity() {
-   uint16_t input, target, output;
+CDifferentialDriveSystem::SVelocity CDifferentialDriveSystem::GetVelocity() {
+   SVelocity sVelocity;
    uint8_t unSREG = SREG;
    cli();
-   input = tempSteps;
-   output = tempOut;
+   sVelocity.Left = nLeftStepsOut;
+   sVelocity.Right = nRightStepsOut;
    SREG = unSREG;
-   target = m_cPIDControlStepInterrupt.nRightTarget;
-   fprintf(Firmware::GetInstance().m_psHUART,
-           "T:%4d I:%4d E:%4d O:%4d\r\n",
-           target,
-           input,
-           target - input,
-           output);
-
+   return sVelocity;
 }
 
 /****************************************/
@@ -110,49 +103,49 @@ void CDifferentialDriveSystem::Disable() {
 /****************************************/
 /****************************************/
 
-void CDifferentialDriveSystem::ConfigureLeftMotor(CDifferentialDriveSystem::EMode e_mode,
+void CDifferentialDriveSystem::ConfigureLeftMotor(CDifferentialDriveSystem::EBridgeMode e_mode,
                                                   uint8_t un_duty_cycle) {
    switch(e_mode) {
-   case EMode::REVERSE_PWM_FD:
+   case EBridgeMode::REVERSE_PWM_FD:
       PORTD |= LEFT_CTRL_PIN;
       PORTD &= ~LEFT_MODE_PIN; //
       break;
-   case EMode::REVERSE_PWM_SD:
+   case EBridgeMode::REVERSE_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD &= ~LEFT_CTRL_PIN;
       PORTD |= LEFT_MODE_PIN; //
       break;
-   case EMode::FORWARD_PWM_FD:
+   case EBridgeMode::FORWARD_PWM_FD:
       PORTD &= ~LEFT_CTRL_PIN;
       PORTD &= ~LEFT_MODE_PIN; //
       break;
-   case EMode::FORWARD_PWM_SD:
+   case EBridgeMode::FORWARD_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD |= LEFT_CTRL_PIN;
       PORTD |= LEFT_MODE_PIN; //
       break;
-   case EMode::COAST:
+   case EBridgeMode::COAST:
       PORTD &= ~(LEFT_PWM_PIN | LEFT_CTRL_PIN | LEFT_MODE_PIN);
       break;
-   case EMode::REVERSE:
+   case EBridgeMode::REVERSE:
       PORTD |= LEFT_PWM_PIN;
       PORTD &= ~LEFT_MODE_PIN;
       PORTD |= LEFT_CTRL_PIN;
       break;
-   case EMode::FORWARD:
+   case EBridgeMode::FORWARD:
       PORTD |= LEFT_PWM_PIN;
       PORTD &= ~LEFT_MODE_PIN;
       PORTD &= ~LEFT_CTRL_PIN;
       break;
-   case EMode::BRAKE:
+   case EBridgeMode::BRAKE:
       PORTD |= (LEFT_PWM_PIN | LEFT_CTRL_PIN | LEFT_MODE_PIN);
       break;
    }
 
-   if(e_mode == EMode::COAST   || 
-      e_mode == EMode::REVERSE || 
-      e_mode == EMode::FORWARD || 
-      e_mode == EMode::BRAKE) {
+   if(e_mode == EBridgeMode::COAST   || 
+      e_mode == EBridgeMode::REVERSE || 
+      e_mode == EBridgeMode::FORWARD || 
+      e_mode == EBridgeMode::BRAKE) {
       /* disconnect PWM from the output pin */
       OCR0A = 0;
       TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
@@ -167,49 +160,49 @@ void CDifferentialDriveSystem::ConfigureLeftMotor(CDifferentialDriveSystem::EMod
 /****************************************/
 /****************************************/
 
-void CDifferentialDriveSystem::ConfigureRightMotor(CDifferentialDriveSystem::EMode e_mode,
+void CDifferentialDriveSystem::ConfigureRightMotor(CDifferentialDriveSystem::EBridgeMode e_mode,
                                                    uint8_t un_duty_cycle) {
    switch(e_mode) {
-   case EMode::REVERSE_PWM_FD:
+   case EBridgeMode::REVERSE_PWM_FD:
       PORTD &= ~RIGHT_CTRL_PIN;
       PORTD &= ~RIGHT_MODE_PIN;
       break;
-   case EMode::REVERSE_PWM_SD:
+   case EBridgeMode::REVERSE_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD |= RIGHT_CTRL_PIN;
       PORTD |= RIGHT_MODE_PIN;
       break;
-   case EMode::FORWARD_PWM_FD:
+   case EBridgeMode::FORWARD_PWM_FD:
       PORTD |= RIGHT_CTRL_PIN;
       PORTD &= ~RIGHT_MODE_PIN;
       break;
-   case EMode::FORWARD_PWM_SD:
+   case EBridgeMode::FORWARD_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD &= ~RIGHT_CTRL_PIN;
       PORTD |= RIGHT_MODE_PIN;
       break;
-   case EMode::COAST:
+   case EBridgeMode::COAST:
       PORTD &= ~(RIGHT_PWM_PIN | RIGHT_CTRL_PIN | RIGHT_MODE_PIN);
       break;
-   case EMode::REVERSE:
+   case EBridgeMode::REVERSE:
       PORTD |= RIGHT_PWM_PIN;
       PORTD &= ~RIGHT_MODE_PIN;
       PORTD &= ~RIGHT_CTRL_PIN;
       break;
-   case EMode::FORWARD:
+   case EBridgeMode::FORWARD:
       PORTD |= RIGHT_PWM_PIN;
       PORTD &= ~RIGHT_MODE_PIN;
       PORTD |= RIGHT_CTRL_PIN;
       break;
-   case EMode::BRAKE:
+   case EBridgeMode::BRAKE:
       PORTD |= (RIGHT_PWM_PIN | RIGHT_CTRL_PIN | RIGHT_MODE_PIN);
       break;
    }
 
-   if(e_mode == EMode::COAST   || 
-      e_mode == EMode::REVERSE || 
-      e_mode == EMode::FORWARD || 
-      e_mode == EMode::BRAKE) {
+   if(e_mode == EBridgeMode::COAST   || 
+      e_mode == EBridgeMode::REVERSE || 
+      e_mode == EBridgeMode::FORWARD || 
+      e_mode == EBridgeMode::BRAKE) {
       /* disconnect PWM from the output pin */
       OCR0B = 0;
       TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
@@ -258,48 +251,42 @@ void CDifferentialDriveSystem::CShaftEncodersInterrupt::ServiceRoutine() {
 void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    /* Calculate left PID intermediates */
    int16_t nLeftError = nLeftTarget - m_pcDifferentialDriveSystem->nLeftSteps;
-   //nLeftIntegral += nLeftError * unDt; // overflow?
-   //int16_t nLeftDerivative = (nLeftError - nLeftLastError) / unDt; // rounding?
-   //nLeftLastError = nLeftError;
+   nLeftErrorIntegral += nLeftError;
+   int16_t nLeftErrorDerivative = (nLeftError - nLeftLastError);
+   nLeftLastError = nLeftError;
    /* Calculate output value */
    int16_t nLeftOutput = 
-      nKp * nLeftError; /* +
-      nKi * nLeftIntegral +
-      nKd * nLeftDerivative;*/
-
-
-
+      nKp * nLeftError +
+      nKi * nLeftErrorIntegral +
+      nKd * nLeftErrorDerivative;
+   /* Saturation the output value at +/-100% duty cycle */
+   nLeftOutput = nLeftOutput > 0xFF ? 0xFF :
+      nLeftOutput < -0xFF ? -0xFF : nLeftOutput;
    /* Calculate right PID intermediates */   
    int16_t nRightError = nRightTarget - m_pcDifferentialDriveSystem->nRightSteps;
-
-   // DEBUG
-   m_pcDifferentialDriveSystem->tempSteps = m_pcDifferentialDriveSystem->nRightSteps;
-
-   //nRightIntegral += nRightError * unDt; // overflow?
-   //int16_t nRightDerivative = (nRightError - nRightLastError) / unDt; // rounding?
-   //nRightLastError = nRightError;
+   nRightErrorIntegral += nRightError;
+   int16_t nRightErrorDerivative = (nRightError - nRightLastError);
+   nRightLastError = nRightError;
    /* Calculate output value */
    int16_t nRightOutput = 
-      nKp * nRightError; /* +
-      nKi * nRightIntegral +
-      nKd * nRightDerivative;   */
-
-   //nRightOutput = nRightOutput > 0xFF ? 0xFF : nRightOutput;
-
-   // DEBUG
-   m_pcDifferentialDriveSystem->tempOut = nRightOutput;
-
-   
-   /* Update motors 
-   m_pcDifferentialDriveSystem->ConfigureLeftMotor(nLeftOutput < 0 ?
-                                                   CDifferentialDriveSystem::EMode::REVERSE_PWM_FD :
-                                                   CDifferentialDriveSystem::EMode::FORWARD_PWM_FD,
-                                                   nLeftOutput < 0 ? -nLeftOutput : nLeftOutput); */
-   m_pcDifferentialDriveSystem->ConfigureRightMotor(nRightOutput < 0 ?
-                                                   CDifferentialDriveSystem::EMode::REVERSE_PWM_FD :
-                                                   CDifferentialDriveSystem::EMode::FORWARD_PWM_FD,
-                                                   nRightOutput < 0 ? -nRightOutput : nRightOutput);
-   
+      nKp * nRightError +
+      nKi * nRightErrorIntegral +
+      nKd * nRightErrorDerivative;
+   /* Saturation the output value at +/-100% duty cycle */
+   nRightOutput = nRightOutput > 0xFF ? 0xFF :
+      nRightOutput < -0xFF ? -0xFF : nRightOutput;  
+   /* Update motors */
+   m_pcDifferentialDriveSystem->ConfigureLeftMotor(
+      nLeftOutput < 0 ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
+                        CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
+      nLeftOutput < 0 ? -nLeftOutput : nLeftOutput);
+   m_pcDifferentialDriveSystem->ConfigureRightMotor(
+      nRightOutput < 0 ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
+                         CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
+      nRightOutput < 0 ? -nRightOutput : nRightOutput);
+   /* copy the step counters for velocity measurements */
+   m_pcDifferentialDriveSystem->nRightStepsOut = m_pcDifferentialDriveSystem->nRightSteps;
+   m_pcDifferentialDriveSystem->nLeftStepsOut = m_pcDifferentialDriveSystem->nLeftSteps;
    /* clear the step counters */
    m_pcDifferentialDriveSystem->nRightSteps = 0;
    m_pcDifferentialDriveSystem->nLeftSteps = 0;
@@ -319,32 +306,19 @@ CDifferentialDriveSystem::CShaftEncodersInterrupt::CShaftEncodersInterrupt(
 /****************************************/
 /****************************************/
 
-/* 
-
-   8MHz, x64 prescaler, 510 steps
-   unDt 4.08ms
-   
-
-   
-   output must be mapped to -0xFF to +0xFF
-
- */
-
 CDifferentialDriveSystem::CPIDControlStepInterrupt::CPIDControlStepInterrupt(
    CDifferentialDriveSystem* pc_differential_drive_system, 
    uint8_t un_intr_vect_num) : 
    m_pcDifferentialDriveSystem(pc_differential_drive_system),
    nLeftTarget(0),
    nLeftLastError(0),
-   nLeftIntegral(0),
+   nLeftErrorIntegral(0),
    nRightTarget(0),
    nRightLastError(0),
-   nRightIntegral(0),
-
-   nKp(2),
-   nKi(15),
-   nKd(1),
-   unDt(4) {
+   nRightErrorIntegral(0),
+   nKp(3),
+   nKi(1),
+   nKd(4) {
    Register(this, un_intr_vect_num);
 }
 

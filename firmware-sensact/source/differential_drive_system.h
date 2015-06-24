@@ -14,13 +14,20 @@ public:
       m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_speed, n_right_speed);
    }
 
-   void GetVelocity();
+   struct SVelocity {
+      int16_t Left;
+      int16_t Right;
+   };
+
+   SVelocity GetVelocity();
 
    void Enable();
    void Disable();
 
    /* To be made private */
-   enum class EMode {
+  
+private:
+   enum class EBridgeMode {
       COAST,
       REVERSE,
       REVERSE_PWM_FD,
@@ -31,10 +38,9 @@ public:
       BRAKE
    };
 
-   void ConfigureLeftMotor(EMode e_mode, uint8_t un_duty_cycle = 0);
-   void ConfigureRightMotor(EMode e_mode, uint8_t un_duty_cycle = 0);
+   void ConfigureLeftMotor(EBridgeMode e_mode, uint8_t un_duty_cycle = 0);
+   void ConfigureRightMotor(EBridgeMode e_mode, uint8_t un_duty_cycle = 0);
 
-private:
    class CShaftEncodersInterrupt : public CInterrupt {
    public:
       CShaftEncodersInterrupt(CDifferentialDriveSystem* pc_differential_drive_system, 
@@ -59,25 +65,26 @@ private:
    public:
       int16_t nLeftTarget;
       int16_t nLeftLastError;
-      int16_t nLeftIntegral;
+      int16_t nLeftErrorIntegral;
       int16_t nRightTarget;
       int16_t nRightLastError;
-      int16_t nRightIntegral;
+      int16_t nRightErrorIntegral;
 
       int16_t nKp;
       int16_t nKi;
       int16_t nKd;
-      uint16_t unDt;
    } m_cPIDControlStepInterrupt;
 
    friend CShaftEncodersInterrupt;
    friend CPIDControlStepInterrupt;
 
+   /* Actual step count variable */
    volatile int16_t nLeftSteps;
    volatile int16_t nRightSteps;
+   /* Cached step count variable */
+   volatile int16_t nLeftStepsOut;
+   volatile int16_t nRightStepsOut;
 
-   volatile int16_t tempOut = 0;
-   volatile int16_t tempSteps = 0;
 };
 
 #endif

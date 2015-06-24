@@ -44,56 +44,68 @@ public:
    }
 
    int Exec() {
-      uint8_t unInput = 0;
+      //uint8_t unInput = 0;
 
-      CDifferentialDriveSystem::EMode eLeftDriveMode = 
-         CDifferentialDriveSystem::EMode::FORWARD_PWM_FD;
-      CDifferentialDriveSystem::EMode eRightDriveMode = 
-         CDifferentialDriveSystem::EMode::FORWARD_PWM_FD;
-      enum class EMotor { LEFT, RIGHT } eSelectedMotor = EMotor::RIGHT;
-      
-      fprintf(m_psHUART, "Ready>\r\n");
+      int16_t pnTestVelocities[] = {0, 40, 120, -80, 0};
 
-      for(;;) {
-         
-         if(Firmware::GetInstance().GetHUARTController().Available()) {
-            unInput = Firmware::GetInstance().GetHUARTController().Read();
-            /* flush */
-            while(Firmware::GetInstance().GetHUARTController().Available()) {
-               Firmware::GetInstance().GetHUARTController().Read();
-            }
-         }
-         else {
-            unInput = 's';
-         }
-
-         switch(unInput) {
-         case 'u':
-            fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
-            break;
-         case 'E':
-            m_cDifferentialDriveSystem.Enable();
-            break;
-         case 'e':
-            m_cDifferentialDriveSystem.Disable();
-            break;
-         case 'l':
-            eSelectedMotor = EMotor::LEFT;
-            break;
-         case 'r':
-            eSelectedMotor = EMotor::RIGHT;
-            break;          
-         case 's':
-            m_cDifferentialDriveSystem.GetVelocity();
-            break;          
-         case '0' ... '9':
-            m_cDifferentialDriveSystem.SetTargetVelocity((unInput - '5') * 40, (unInput - '5') * 40);
-            //m_cDifferentialDriveSystem.ConfigureRightMotor(eRightDriveMode, 80 + (unInput - '0') * 5);
-            break;
-         default:
-            break;
+      m_cDifferentialDriveSystem.Enable();
+      for(int16_t nTargetVelocity : pnTestVelocities) {
+         m_cDifferentialDriveSystem.SetTargetVelocity(nTargetVelocity, nTargetVelocity);
+         for(uint16_t cnt = 0; cnt < 400; cnt++) {
+            CDifferentialDriveSystem::SVelocity sVelocity = 
+               m_cDifferentialDriveSystem.GetVelocity();
+            fprintf(m_psHUART, 
+                    "%4d\t%4d\t%4d\r\n", 
+                    nTargetVelocity, 
+                    sVelocity.Left, 
+                    sVelocity.Right);
          }
       }
+      m_cDifferentialDriveSystem.Disable();
+
+      
+      // for(;;) {
+         
+      //    if(Firmware::GetInstance().GetHUARTController().Available()) {
+      //       unInput = Firmware::GetInstance().GetHUARTController().Read();
+      //       /* flush */
+      //       while(Firmware::GetInstance().GetHUARTController().Available()) {
+      //          Firmware::GetInstance().GetHUARTController().Read();
+      //       }
+      //    }
+      //    else {
+      //       unInput = 's';
+      //    }
+
+      //    switch(unInput) {
+      //    case 'u':
+      //       fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
+      //       break;
+      //    case 'E':
+      //       m_cDifferentialDriveSystem.Enable();
+      //       break;
+      //    case 'e':
+      //       m_cDifferentialDriveSystem.Disable();
+      //       break;
+      //    case 'l':
+      //       eSelectedMotor = EMotor::LEFT;
+      //       break;
+      //    case 'r':
+      //       eSelectedMotor = EMotor::RIGHT;
+      //       break;          
+      //    case 's':
+      //       m_cDifferentialDriveSystem.GetVelocity();
+      //       break;          
+      //    case '0' ... '9':
+      //       m_cDifferentialDriveSystem.SetTargetVelocity((unInput - '5') * 40, (unInput - '5') * 40);
+      //       //m_cDifferentialDriveSystem.ConfigureRightMotor(eRightDriveMode, 80 + (unInput - '0') * 5);
+      //       break;
+      //    default:
+      //       break;
+      //    }
+      // }
+      
+
       return 0;
    }
       
