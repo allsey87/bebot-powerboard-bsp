@@ -17,6 +17,7 @@
 #include <bq24250_controller.h>
 #include <pca9633_module.h>
 #include <usb_interface_system.h>
+#include <adc_controller.h>
 #include <huart_controller.h>
 #include <tw_controller.h>
 #include <timer.h>
@@ -96,6 +97,8 @@ private:
    CPCA9633Module m_cBatteryStatusLEDs;
 
    CUSBInterfaceSystem m_cUSBInterfaceSystem;
+
+   CADCController m_cADCController;
 
    static Firmware _firmware;
 

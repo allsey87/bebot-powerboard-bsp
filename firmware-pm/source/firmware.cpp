@@ -121,8 +121,12 @@ int Firmware::Exec()
       if(unInput != 0) {
          fprintf(m_psHUART, "\r\n");
          switch(unInput) {
-         case 'u':
-            fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
+         case 'b':
+            fprintf(m_psHUART,
+                    "Batt 1 = %umV\r\n" 
+                    "Batt 2 = %umV\r\n",
+                    m_cADCController.GetValue(CADCController::EChannel::ADC6) * 17,
+                    m_cADCController.GetValue(CADCController::EChannel::ADC7) * 17);
             break;
          case 'p':
             TestPMICs();
@@ -184,13 +188,9 @@ int Firmware::Exec()
             GetTimer().Delay(100);
             m_cUSBInterfaceSystem.Enable();
             GetTimer().Delay(100);
-            /*
-            for(uint8_t addr = 0x01; addr < 0x7F; addr++) {
-               GetTWController().BeginTransmission(addr);
-               uint8_t err = GetTWController().EndTransmission(addr);
-               fprintf(m_psHUART, "0x%02x: %d\r\n", addr, err);
-            }
-            */
+            break;
+         case 'u':
+            fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
             break;
          default:
             break;
