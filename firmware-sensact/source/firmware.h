@@ -18,6 +18,7 @@
 #include <timer.h>
 
 #include <differential_drive_system.h>
+#include <accelerometer_system.h>
 
 class Firmware {
 public:
@@ -39,6 +40,10 @@ public:
       return m_cHUARTController;
    }
 
+   CTWController& GetTWController() {
+      return m_cTWController;
+   }
+
    CTimer& GetTimer() {
       return m_cTimer;
    }
@@ -46,10 +51,13 @@ public:
    int Exec() {
       enum class EMotor { LEFT, RIGHT } eSelectedMotor = EMotor::RIGHT;
       CDifferentialDriveSystem::SVelocity sVelocity;
+      CAccelerometerSystem::SReading sReading;
       int16_t nLeftSpeed = 0, nRightSpeed = 0;
       uint8_t unInput = 0;
+
+      m_cAccelerometerSystem.Init();
+
       for(;;) {
-         
          if(Firmware::GetInstance().GetHUARTController().Available()) {
             unInput = Firmware::GetInstance().GetHUARTController().Read();
             /* flush */
@@ -61,6 +69,15 @@ public:
             unInput = 0;
          }
          switch(unInput) {
+         case 'a':
+            sReading = m_cAccelerometerSystem.GetReading();
+            fprintf(m_psHUART, 
+                    "Acc[x] = %i\r\n"
+                    "Acc[y] = %i\r\n"
+                    "Acc[z] = %i\r\n"
+                    "Temp = %i\r\n",
+                    sReading.X, sReading.Y, sReading.Z, sReading.Temp);
+            break;
          case 'u':
             fprintf(m_psHUART, "Uptime: %lums\r\n", m_cTimer.GetMilliseconds());
             break;
@@ -102,13 +119,10 @@ public:
             TestDriveSystem();
             fprintf(m_psHUART, "-- DDS Test End --\r\n");
             break;
-
          default:
             break;
          }
       }
-      
-
       return 0;
    }
 
@@ -160,6 +174,8 @@ private:
    CTWController& m_cTWController;
 
    CDifferentialDriveSystem m_cDifferentialDriveSystem;
+
+   CAccelerometerSystem m_cAccelerometerSystem;
 
    static Firmware _firmware;
 
