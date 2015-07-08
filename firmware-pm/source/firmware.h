@@ -13,24 +13,16 @@
 #include <stdlib.h>
 
 /* Firmware Headers */
-#include <bq24161_controller.h>
-#include <bq24250_controller.h>
-#include <pca9633_module.h>
 #include <usb_interface_system.h>
-#include <adc_controller.h>
+
 #include <huart_controller.h>
 #include <tw_controller.h>
 #include <timer.h>
 
-#define PIN_ACTUATORS_EN 0x80
-#define PIN_SYSTEM_EN 0x10
-#define PIN_BQ24250_INPUT_EN 0x40
-#define PIN_VUSB50_L500_EN 0x20
-
 class Firmware {
 public:
       
-   static Firmware& GetInstance() {
+   static CFirmware& GetInstance() {
       return _firmware;
    }
 
@@ -62,7 +54,7 @@ public:
 private:
 
    /* private constructor */
-   Firmware() :
+   CFirmware() :
       m_cTimer(TCCR2A,
                TCCR2A | (1 << WGM21) | (1 << WGM20),
                TCCR2B,
@@ -74,13 +66,20 @@ private:
                TIMER2_OVF_vect_num),
       m_cHUARTController(HardwareSerial::instance()),
       m_cTWController(CTWController::GetInstance()),
-      m_cPowerSourceStatusLEDs(0x60),
-      m_cBatteryStatusLEDs(0x61) {     
+      m_cPowerEventInterrupt(this, PCINT1_vect_num),
+      m_eSwitchState(ESwitchState::RELEASED),
+      m_unSwitchPressedTime(0),
+      m_bSwitchSignal(false),
+      m_bUSBSignal(false),
+      m_bSystemPowerSignal(false),
+      m_bActuatorPowerSignal(false) {
 
       /* Enable interrupts */
       sei();
+
    }
-   
+
+   /* Hardware objects */
    CTimer m_cTimer;
 
    /* ATMega328P Controllers */
@@ -90,17 +89,40 @@ private:
  
    CTWController& m_cTWController;
 
-   CBQ24161Controller m_cBQ24161Controller;
-   CBQ24250Controller m_cBQ24250Controller;
-
-   CPCA9633Module m_cPowerSourceStatusLEDs;
-   CPCA9633Module m_cBatteryStatusLEDs;
-
    CUSBInterfaceSystem m_cUSBInterfaceSystem;
 
-   CADCController m_cADCController;
+   CPowerManagementSystem m_cPowerManagementSystem;
 
-   static Firmware _firmware;
+   class CPowerEventInterrupt : public CInterrupt {
+   public:
+      CPowerEventInterrupt(CFirmware* pc_firmware, 
+                           uint8_t un_intr_vect_num);
+
+      void Enable();
+
+      void Disable();
+   private:  
+      CFirmware* m_pcFirmware;
+      uint8_t m_unLastPortState;
+      void ServiceRoutine();
+   } m_cPowerEventInterrupt;
+
+   friend CPowerEventInterrupt;
+
+   enum class ESwitchState {
+      PRESSED,
+      RELEASED,
+   } m_eSwitchState;
+
+   uint32_t m_unSwitchPressedTime;
+   
+   /* Signals */
+   bool m_bSwitchSignal;
+   bool m_bUSBSignal;
+   bool m_bSystemPowerSignal;
+   bool m_bActuatorPowerSignal;
+
+   static CFirmware _firmware;
 
 public: // TODO, don't make these public
     /* File structs for fprintf */

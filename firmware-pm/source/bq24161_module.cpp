@@ -1,13 +1,10 @@
 
-#include "bq24161_controller.h"
+#include "bq24161_module.h"
 
-#include "firmware.h"
-
-// Datasheet: http://www.ti.com/lit/ds/symlink/bq24161.pdf
+#include <firmware.h>
 
 #define BQ24161_ADDR 0x6B
 
-// TODO move these defines to the base tw class
 #define R0_ADDR 0x00
 #define R1_ADDR 0x01
 #define R2_ADDR 0x02
@@ -15,16 +12,15 @@
 #define R4_ADDR 0x04
 #define R5_ADDR 0x05
 
-#define STAT_MASK 0x70
-#define FAULT_MASK 0x07
-#define ADAPTER_STAT_MASK 0xC0
-#define USB_STAT_MASK 0x30
-#define BATT_STAT_MASK 0x06
-
 #define R0_WDT_RST_MASK 0x80
+#define R0_STAT_MASK 0x70
+#define R0_FAULT_MASK 0x07
 
-#define R1_NOBATT_OP_MASK 0x01
+#define R1_ADAPTER_STAT_MASK 0xC0
+#define R1_USB_STAT_MASK 0x30
 #define R1_OTG_LOCKOUT_MASK 0x08
+#define R1_BATT_STAT_MASK 0x06
+#define R1_NOBATT_OP_MASK 0x01
 
 #define R2_RST_MASK 0x80
 #define R2_USB_INPUT_LIMIT_MASK 0x70
@@ -39,7 +35,7 @@
 #define REG_VOLTAGE_OFFSET 3500
 
 
-void CBQ24161Controller::ResetWatchdogTimer() {
+void CBQ24161Module::ResetWatchdogTimer() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R0_ADDR);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -56,7 +52,7 @@ void CBQ24161Controller::ResetWatchdogTimer() {
 
 }
 
-void CBQ24161Controller::DumpRegister(uint8_t un_addr) {
+void CBQ24161Module::DumpRegister(uint8_t un_addr) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(un_addr);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -67,7 +63,7 @@ void CBQ24161Controller::DumpRegister(uint8_t un_addr) {
            Firmware::GetInstance().GetTWController().Read());
 }
 
-void CBQ24161Controller::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
+void CBQ24161Module::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R2_ADDR);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -108,7 +104,7 @@ void CBQ24161Controller::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetChargingEnable(bool b_enable) {
+void CBQ24161Module::SetChargingEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R2_ADDR);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -131,7 +127,7 @@ void CBQ24161Controller::SetChargingEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetNoBattOperationEnable(bool b_enable) {
+void CBQ24161Module::SetNoBattOperationEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(R1_ADDR);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -152,7 +148,7 @@ void CBQ24161Controller::SetNoBattOperationEnable(bool b_enable) {
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv) {
+void CBQ24161Module::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv) {
    /* check if the requested voltage is in range */
    if(un_batt_voltage_mv < REG_VOLTAGE_OFFSET || 
       un_batt_voltage_mv > 4440)
@@ -184,7 +180,7 @@ void CBQ24161Controller::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma) {
+void CBQ24161Module::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma) {
    /* check if the requested current is in range */
    if(un_batt_chrg_current_ma < CHRG_CURRENT_OFFSET ||
       un_batt_chrg_current_ma > 2875)
@@ -216,7 +212,7 @@ void CBQ24161Controller::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CBQ24161Controller::SetBatteryTerminationCurrent(uint16_t un_batt_term_current_ma) {
+void CBQ24161Module::SetBatteryTerminationCurrent(uint16_t un_batt_term_current_ma) {
    /* check if the requested current is in range */
    if(un_batt_term_current_ma < TERM_CURRENT_OFFSET || 
       un_batt_term_current_ma > 2875)
@@ -249,7 +245,7 @@ void CBQ24161Controller::SetBatteryTerminationCurrent(uint16_t un_batt_term_curr
 }
 
 
-void CBQ24161Controller::Synchronize() {
+void CBQ24161Module::Synchronize() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    Firmware::GetInstance().GetTWController().Write(0x00);
    Firmware::GetInstance().GetTWController().EndTransmission(false);

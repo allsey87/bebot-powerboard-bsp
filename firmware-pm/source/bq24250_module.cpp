@@ -1,11 +1,9 @@
 
-#include "bq24250_controller.h"
+#include "bq24250_module.h"
 
 #include <stdint.h>
 
-#include "firmware.h"
-
-// Datasheet: http://www.ti.com/lit/ds/symlink/bq24250.pdf
+#include <firmware.h>
 
 #define BQ24250_ADDR 0x6A
 
@@ -19,7 +17,7 @@
 #define R1_RST_MASK 0x80
 #define R1_CHGEN_MASK 0x02
 
-void CBQ24250Controller::DumpRegister(uint8_t un_addr) {
+void CBQ24250Module::DumpRegister(uint8_t un_addr) {
 
    CTWController::GetInstance().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(un_addr);
@@ -31,7 +29,7 @@ void CBQ24250Controller::DumpRegister(uint8_t un_addr) {
            Firmware::GetInstance().GetTWController().Read());
 }
 
-void CBQ24250Controller::SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint8_t un_value) {
+void CBQ24250Module::SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint8_t un_value) {
    /* read old value */
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(un_addr);
@@ -54,7 +52,7 @@ void CBQ24250Controller::SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint
    Firmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-uint8_t CBQ24250Controller::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
+uint8_t CBQ24250Module::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
    /* read old value */
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(un_addr);
@@ -72,7 +70,7 @@ uint8_t CBQ24250Controller::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
    return unRegister;
 }
 
-void CBQ24250Controller::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit) {
+void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit) {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(0x01);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -127,7 +125,7 @@ void CBQ24250Controller::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLi
 }
 
 
-void CBQ24250Controller::ResetWatchdogTimer() {
+void CBQ24250Module::ResetWatchdogTimer() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(0x00);
    Firmware::GetInstance().GetTWController().Write(0x40);
@@ -142,7 +140,7 @@ void CBQ24250Controller::ResetWatchdogTimer() {
 }
 
 
-void CBQ24250Controller::EnableCharging() {
+void CBQ24250Module::EnableCharging() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(0x01);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
@@ -164,7 +162,7 @@ void CBQ24250Controller::EnableCharging() {
 
 }
 
-void CBQ24250Controller::Synchronize() {
+void CBQ24250Module::Synchronize() {
    Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    Firmware::GetInstance().GetTWController().Write(0x00);
    Firmware::GetInstance().GetTWController().EndTransmission(false);
