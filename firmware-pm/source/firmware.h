@@ -14,12 +14,13 @@
 
 /* Firmware Headers */
 #include <usb_interface_system.h>
+#include <power_management_system.h>
 
 #include <huart_controller.h>
 #include <tw_controller.h>
 #include <timer.h>
 
-class Firmware {
+class CFirmware {
 public:
       
    static CFirmware& GetInstance() {
@@ -47,7 +48,7 @@ public:
       return m_cTimer;
    }
 
-   int Exec();
+   void Exec();
 
    void TestPMICs();
       
@@ -103,7 +104,7 @@ private:
       void Disable();
    private:  
       CFirmware* m_pcFirmware;
-      uint8_t m_unLastPortState;
+      uint8_t m_unPortLast;
       void ServiceRoutine();
    } m_cPowerEventInterrupt;
 

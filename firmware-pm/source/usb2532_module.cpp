@@ -64,23 +64,23 @@ void CUSB2532Module::Init() {
 }
 
 void CUSB2532Module::Write(uint16_t un_offset, uint8_t un_count, uint8_t* pun_buffer) {
-   Firmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_offset >> 8);
-   Firmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
-   Firmware::GetInstance().GetTWController().Write(un_count);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(un_offset >> 8);
+   CFirmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
+   CFirmware::GetInstance().GetTWController().Write(un_count);
    for(uint8_t unIdx = 0; unIdx < un_count; unIdx++) {
-      Firmware::GetInstance().GetTWController().Write(pun_buffer[unIdx]);
+      CFirmware::GetInstance().GetTWController().Write(pun_buffer[unIdx]);
    }
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
 void CUSB2532Module::Read(uint16_t un_offset, uint8_t un_count, uint8_t* pun_buffer) {
-   Firmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_offset >> 8);
-   Firmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(HUB_CFGMODE_ADDR, un_count, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(un_offset >> 8);
+   CFirmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(HUB_CFGMODE_ADDR, un_count, true);
    for(uint8_t unIdx = 0; unIdx < un_count; unIdx++) {
-      pun_buffer[unIdx] = Firmware::GetInstance().GetTWController().Read();
+      pun_buffer[unIdx] = CFirmware::GetInstance().GetTWController().Read();
    }
 }

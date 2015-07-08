@@ -1,6 +1,8 @@
+#ifndef ADC_CONTROLLER_H
 #define ADC_CONTROLLER_H
 
 #include <stdint.h>
+#include <avr/io.h>
 
 #define ADC_MUX_MASK 0x0F
 
@@ -44,3 +46,5 @@ public:
       return ADCH;
    }
 };
+
+#endif

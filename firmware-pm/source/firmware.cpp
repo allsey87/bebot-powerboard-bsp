@@ -20,7 +20,7 @@
 /***********************************************************/
 
 /* initialisation of the static singleton */
-Firmware Firmware::_firmware;
+CFirmware CFirmware::_firmware;
 
 /* main function that runs the firmware */
 int main(void)
@@ -31,11 +31,11 @@ int main(void)
    /* Set up FILE structs for fprintf */                           
    fdev_setup_stream(&huart, 
                      [](char c_to_write, FILE* pf_stream) {
-                        Firmware::GetInstance().GetHUARTController().Write(c_to_write);
+                        CFirmware::GetInstance().GetHUARTController().Write(c_to_write);
                         return 1;
                      },
                      [](FILE* pf_stream) {
-                        return int(Firmware::GetInstance().GetHUARTController().Read());
+                        return int(CFirmware::GetInstance().GetHUARTController().Read());
                      },
                      _FDEV_SETUP_RW);
 
@@ -85,14 +85,14 @@ void CFirmware::CPowerEventInterrupt::Disable() {
 /***********************************************************/
 /***********************************************************/
 
-void CFirmware::CPowerSignalInterrupt::ServiceRoutine() {
+void CFirmware::CPowerEventInterrupt::ServiceRoutine() {
    uint8_t unPortSnapshot = PINC;
-   uint8_t unPortDelta = unPortLast ^ unPortSnapshot;
+   uint8_t unPortDelta = m_unPortLast ^ unPortSnapshot;
 
    /* Check power switch state */
    if(unPortDelta & PORTC_SWITCH_IRQ) {
       m_pcFirmware->m_bSwitchSignal = true;
-      m_pcFirmware->m_eSwitchState = unPortSnapshot & PORTC_SWITCH_IRQ ?
+      m_pcFirmware->m_eSwitchState = (unPortSnapshot & PORTC_SWITCH_IRQ) ?
          CFirmware::ESwitchState::PRESSED :
          CFirmware::ESwitchState::RELEASED;
    }
@@ -100,19 +100,19 @@ void CFirmware::CPowerSignalInterrupt::ServiceRoutine() {
    if(unPortDelta & PORTC_HUB_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bUSBSignal = 
-         (unPortSnapshot & PORTC_HUB_IRQ == 0);
+         ((unPortSnapshot & PORTC_HUB_IRQ) == 0);
    }
    /* Check system power manager state */
    if(unPortDelta & PORTC_SYSTEM_POWER_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bSystemPowerSignal = 
-         (unPortSnapshot & PORTC_SYSTEM_POWER_IRQ == 0);
+         ((unPortSnapshot & PORTC_SYSTEM_POWER_IRQ) == 0);
    }
    /* Check actuator power manager state */
    if(unPortDelta & PORTC_ACTUATOR_POWER_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bActuatorPowerSignal = 
-         (unPortSnapshot & PORTC_ACTUATOR_POWER_IRQ == 0);
+         ((unPortSnapshot & PORTC_ACTUATOR_POWER_IRQ) == 0);
    }
    m_unPortLast = unPortSnapshot;
 }
@@ -159,11 +159,11 @@ void CFirmware::Exec()
       }
       
       /* check for input command */
-      if(Firmware::GetInstance().GetHUARTController().Available()) {
-         unInput = Firmware::GetInstance().GetHUARTController().Read();
+      if(CFirmware::GetInstance().GetHUARTController().Available()) {
+         unInput = CFirmware::GetInstance().GetHUARTController().Read();
          /* flush */
-         while(Firmware::GetInstance().GetHUARTController().Available()) {
-            Firmware::GetInstance().GetHUARTController().Read();
+         while(CFirmware::GetInstance().GetHUARTController().Available()) {
+            CFirmware::GetInstance().GetHUARTController().Read();
          }
       }
       else {
@@ -180,7 +180,7 @@ void CFirmware::Exec()
             m_cPowerEventInterrupt.Disable();
             break;
          case 'd':
-            m_CPowerManagementSystem.PrintStatus();
+            m_cPowerManagementSystem.PrintStatus();
             break;
          case 'e':
             m_cUSBInterfaceSystem.Disable();

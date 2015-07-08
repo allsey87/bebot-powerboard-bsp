@@ -20,22 +20,22 @@
 void CBQ24250Module::DumpRegister(uint8_t un_addr) {
 
    CTWController::GetInstance().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_addr);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
-   fprintf(Firmware::GetInstance().m_psHUART,
+   CFirmware::GetInstance().GetTWController().Write(un_addr);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   fprintf(CFirmware::GetInstance().m_psHUART,
            "Register 0x%02x : 0x%02x\r\n",
            un_addr,
-           Firmware::GetInstance().GetTWController().Read());
+           CFirmware::GetInstance().GetTWController().Read());
 }
 
 void CBQ24250Module::SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint8_t un_value) {
    /* read old value */
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_addr);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
-   uint8_t unRegister = Firmware::GetInstance().GetTWController().Read();
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(un_addr);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
    /* clear bits to be updated */
    unRegister &= ~un_mask;
    /* shift the value into the correct position */
@@ -46,19 +46,19 @@ void CBQ24250Module::SetRegisterValue(uint8_t un_addr, uint8_t un_mask, uint8_t 
    /* set the updated bits */
    unRegister |= un_value;
    /* write back the value */
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_addr);
-   Firmware::GetInstance().GetTWController().Write(unRegister);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(un_addr);
+   CFirmware::GetInstance().GetTWController().Write(unRegister);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
 uint8_t CBQ24250Module::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
    /* read old value */
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(un_addr);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
-   uint8_t unRegister = Firmware::GetInstance().GetTWController().Read();
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(un_addr);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
    /* clear unwanted bits */
    unRegister &= un_mask;
    /* shift value down to the correction position  */
@@ -71,12 +71,12 @@ uint8_t CBQ24250Module::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
 }
 
 void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit) {
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x01);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x01);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
 
-   uint8_t unRegister = Firmware::GetInstance().GetTWController().Read();
+   uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
 
    /* clear the current value and assure reset is clear */
    unRegister &= ~R1_ILIMIT_MASK;
@@ -113,10 +113,10 @@ void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit)
       break;
    }
 
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x01);
-   Firmware::GetInstance().GetTWController().Write(unRegister);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x01);
+   CFirmware::GetInstance().GetTWController().Write(unRegister);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 
    //DEBUG
    DumpRegister(0x00); DumpRegister(0x01);
@@ -126,27 +126,27 @@ void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit)
 
 
 void CBQ24250Module::ResetWatchdogTimer() {
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x00);
-   Firmware::GetInstance().GetTWController().Write(0x40);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().Write(0x40);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 
    // DEBUG
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x00);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
-   Firmware::GetInstance().GetTWController().Read();
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().Read();
 }
 
 
 void CBQ24250Module::EnableCharging() {
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x01);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x01);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
 
-   uint8_t unRegister = Firmware::GetInstance().GetTWController().Read();
+   uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
 
    /* assure reset is clear */
    unRegister &= ~R1_RST_MASK;
@@ -155,20 +155,20 @@ void CBQ24250Module::EnableCharging() {
    unRegister &= ~R1_CHGEN_MASK;
 
    /* write back */
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x01);
-   Firmware::GetInstance().GetTWController().Write(unRegister);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x01);
+   CFirmware::GetInstance().GetTWController().Write(unRegister);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 
 }
 
 void CBQ24250Module::Synchronize() {
-   Firmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
-   Firmware::GetInstance().GetTWController().Write(0x00);
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24250_ADDR, 1, true);
 
-   uint8_t unRegister = Firmware::GetInstance().GetTWController().Read();
+   uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
 
    /* update the device state variable */
    switch((unRegister & R0_STAT_MASK) >> 4) {

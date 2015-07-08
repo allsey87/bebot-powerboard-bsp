@@ -1,9 +1,9 @@
-#ifndef BQ24250_CONTROLLER_H
-#define BQ24250_CONTROLLER_H
+#ifndef BQ24250_MODULE_H
+#define BQ24250_MODULE_H
 
 #include <stdint.h>
 
-class CBQ24250Controller {
+class CBQ24250Module {
 public:
 
    enum class EFault {

@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <bq24161_module.h>
 #include <bq24250_module.h>
+#include <pca9633_module.h>
 #include <adc_controller.h>
 #include <interrupt.h>
 

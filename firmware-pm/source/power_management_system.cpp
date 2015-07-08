@@ -44,14 +44,14 @@ void CPowerManagementSystem::Init() {
    SetSystemToActuatorPassthroughPowerOn(false);
    SetActuatorPowerOn(false);
    
-   m_cActuatorPowerManager.SetInputCurrentLimit(CBQ24250Controller::EInputCurrentLimit::LHIZ);
+   m_cActuatorPowerManager.SetInputCurrentLimit(CBQ24250Module::EInputCurrentLimit::LHIZ);
 
    m_cSystemPowerManager.SetBatteryRegulationVoltage(SYS_BATT_REG_VOLTAGE);
    m_cSystemPowerManager.SetBatteryChargingCurrent(SYS_BATT_CHG_CURRENT);
    m_cSystemPowerManager.SetBatteryTerminationCurrent(SYS_BATT_TRM_CURRENT);
 
    CPCA9633Module::ResetDevices();
-   m_cPowerSourceStatusLEDs.Init();
+   m_cInputStatusLEDs.Init();
    m_cBatteryStatusLEDs.Init();
 
    Update();
@@ -104,9 +104,9 @@ void CPowerManagementSystem::Update() {
       m_cADCController.GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF;
 
    /* Configure status LEDs */
-   if(m_cBQ24161Controller.GetBatteryState() != CBQ24161Controller::EBatteryState::NORMAL ||
-      m_cBQ24161Controller.GetFault() == CBQ24161Controller::EFault::BATT_FAULT ||
-      m_cBQ24161Controller.GetFault() == CBQ24161Controller::EFault::BATT_THERMAL_SHDN) {
+   if(m_cSystemPowerManager.GetBatteryState() != CBQ24161Module::EBatteryState::NORMAL ||
+      m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_FAULT ||
+      m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_THERMAL_SHDN) {
             
       m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
       m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
