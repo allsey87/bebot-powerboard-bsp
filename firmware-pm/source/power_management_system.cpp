@@ -127,12 +127,14 @@ bool CPowerManagementSystem::IsUSBConnected() {
 /***********************************************************/
 
 void CPowerManagementSystem::PrintStatus() {
+   /* System power manager */
    m_cSystemPowerManager.Synchronize();
-   fprintf(CFirmware::GetInstance().m_psHUART, "<System PMIC>");
+   fprintf(CFirmware::GetInstance().m_psHUART, "<System PMIC>\r\n");
    for(uint8_t i = 0; i < 7; i++) {
       m_cSystemPowerManager.DumpRegister(i);
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nstate: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "---\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "state: ");
    switch(m_cSystemPowerManager.GetDeviceState()) {
    case CBQ24161Module::EDeviceState::STANDBY:
       fprintf(CFirmware::GetInstance().m_psHUART, "standby");
@@ -150,7 +152,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "fault");
       break;
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nfault: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "fault: ");
    switch(m_cSystemPowerManager.GetFault()) {
    case CBQ24161Module::EFault::NONE:
       fprintf(CFirmware::GetInstance().m_psHUART, "none");
@@ -177,7 +180,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "batt_fault");
       break;
    }           
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nselected source: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "selected source: ");
    switch(m_cSystemPowerManager.GetSelectedSource()) {
    case CBQ24161Module::ESource::NONE:
       fprintf(CFirmware::GetInstance().m_psHUART, "none");
@@ -189,7 +193,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "usb");
       break;
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nadapter input: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "adapter input: ");
    switch(m_cSystemPowerManager.GetAdapterInputState()) {
    case CBQ24161Module::EInputState::NORMAL:
       fprintf(CFirmware::GetInstance().m_psHUART, "normal");
@@ -219,7 +224,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "under_voltage");
       break;
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nbattery_state: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "battery_state: ");
    switch(m_cSystemPowerManager.GetBatteryState()) {
    case CBQ24161Module::EBatteryState::NORMAL:
       fprintf(CFirmware::GetInstance().m_psHUART, "normal");
@@ -235,11 +241,14 @@ void CPowerManagementSystem::PrintStatus() {
       break;
    }
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   /* Actuator power manager */
    m_cActuatorPowerManager.Synchronize();
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, "<Actuator PMIC>\r\n");
    for(uint8_t i = 0; i < 2; i++) {
       m_cActuatorPowerManager.DumpRegister(i);
    }
+   fprintf(CFirmware::GetInstance().m_psHUART, "---\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, "state: ");
    switch(m_cActuatorPowerManager.GetDeviceState()) {
    case CBQ24250Module::EDeviceState::READY:
@@ -255,7 +264,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "fault");
       break;
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nfault: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "fault: ");
    switch(m_cActuatorPowerManager.GetFault()) {
    case CBQ24250Module::EFault::NONE:
       fprintf(CFirmware::GetInstance().m_psHUART, "none");
@@ -294,11 +304,12 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "undefined");
       break;
    }
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, 
-           "\r\nwatchdog enabled = %c", 
+           "watchdog enabled = %c\r\n", 
            m_cActuatorPowerManager.GetWatchdogEnabled()?'t':'f');
    fprintf(CFirmware::GetInstance().m_psHUART, 
-           "\r\nwatchdog fault = %c", 
+           "watchdog fault = %c\r\n", 
            m_cActuatorPowerManager.GetWatchdogFault()?'t':'f');
 }
 

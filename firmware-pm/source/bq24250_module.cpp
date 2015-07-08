@@ -117,11 +117,6 @@ void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit)
    CFirmware::GetInstance().GetTWController().Write(0x01);
    CFirmware::GetInstance().GetTWController().Write(unRegister);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
-
-   //DEBUG
-   DumpRegister(0x00); DumpRegister(0x01);
-   DumpRegister(0x00); DumpRegister(0x01);
-   DumpRegister(0x00); DumpRegister(0x01);
 }
 
 

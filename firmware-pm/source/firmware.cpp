@@ -133,13 +133,19 @@ void CFirmware::Exec()
 
    for(;;) {
       if(m_bSwitchSignal || m_bUSBSignal || m_bSystemPowerSignal || m_bActuatorPowerSignal) {
-         fprintf(m_psHUART, "IRQs: ");
-         if(m_bSwitchSignal) 
+         fprintf(m_psHUART, "IRQs (0x%02x): ", PINC);
+         if(m_bSwitchSignal) {
             fprintf(m_psHUART, "SW-");
-         if(m_bUSBSignal) 
+            m_bSwitchSignal = false;
+         }
+         if(m_bUSBSignal) {
             fprintf(m_psHUART, "USB-");
-         if(m_bSystemPowerSignal) 
+            m_bUSBSignal = false;
+         }
+         if(m_bSystemPowerSignal) { 
             fprintf(m_psHUART, "PSYS-");
+            m_bSystemPowerSignal = false;
+         }
          if(m_bActuatorPowerSignal) 
             fprintf(m_psHUART, "PACT-");
          fprintf(m_psHUART, "\r\n");
@@ -154,7 +160,7 @@ void CFirmware::Exec()
       }
 
       if(bPrintPrompt) {
-         fprintf(m_psHUART, "Ready> ");
+         fprintf(m_psHUART, "\r\nReady> ");
          bPrintPrompt = false;
       }
       
@@ -172,6 +178,7 @@ void CFirmware::Exec()
 
       /* process input command */
       if(unInput != 0) {
+         fprintf(m_psHUART, "\r\n");
          switch(unInput) {
          case 'X':
             m_cPowerEventInterrupt.Enable();
