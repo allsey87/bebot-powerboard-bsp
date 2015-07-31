@@ -15,6 +15,7 @@
 /***********************************************************/
 
 #define SYNC_PERIOD 10000
+#define HARD_PWDN_PERIOD 2500
 
 /***********************************************************/
 /***********************************************************/
@@ -63,10 +64,10 @@ void CFirmware::CPowerEventInterrupt::Enable() {
    /* Enable port change interrupts for external events */ 
    PCMSK1 |= ((1 << PCINT8)  | (1 << PCINT9) | 
               (1 << PCINT10) | (1 << PCINT11));
+   /* Assume all interrupt sources except the switch could have fired */
+   m_unPortLast = ~PINC | PORTC_SWITCH_IRQ;
    /* Enable the port change interrupt group PCINT[14:8] */
    PCICR |= (1 << PCIE1);
-   /* Assume all interrupt sources could have fired */
-   m_unPortLast = ~PINC;
    /* Manually execute the service routine once */
    ServiceRoutine();
 }
@@ -93,25 +94,28 @@ void CFirmware::CPowerEventInterrupt::ServiceRoutine() {
    if(unPortDelta & PORTC_SWITCH_IRQ) {
       m_pcFirmware->m_bSwitchSignal = true;
       m_pcFirmware->m_eSwitchState = (unPortSnapshot & PORTC_SWITCH_IRQ) ?
-         CFirmware::ESwitchState::PRESSED :
-         CFirmware::ESwitchState::RELEASED;
+         CFirmware::ESwitchState::RELEASED :
+         CFirmware::ESwitchState::PRESSED;
    }
    /* Check USB hub system state */
    if(unPortDelta & PORTC_HUB_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bUSBSignal = 
+         m_pcFirmware->m_bUSBSignal ||
          ((unPortSnapshot & PORTC_HUB_IRQ) == 0);
    }
    /* Check system power manager state */
    if(unPortDelta & PORTC_SYSTEM_POWER_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bSystemPowerSignal = 
+         m_pcFirmware->m_bSystemPowerSignal ||
          ((unPortSnapshot & PORTC_SYSTEM_POWER_IRQ) == 0);
    }
    /* Check actuator power manager state */
    if(unPortDelta & PORTC_ACTUATOR_POWER_IRQ) {
       /* signal is true if it was a falling edge */
       m_pcFirmware->m_bActuatorPowerSignal = 
+         m_pcFirmware->m_bActuatorPowerSignal ||
          ((unPortSnapshot & PORTC_ACTUATOR_POWER_IRQ) == 0);
    }
    m_unPortLast = unPortSnapshot;
@@ -123,6 +127,7 @@ void CFirmware::CPowerEventInterrupt::ServiceRoutine() {
 void CFirmware::Exec() 
 {
    uint32_t unLastSyncTime = 0;
+   uint32_t unSwitchPressedTime = 0;
    uint8_t unInput = 0;
    bool bPrintPrompt = true;
 
@@ -137,6 +142,28 @@ void CFirmware::Exec()
          if(m_bSwitchSignal) {
             fprintf(m_psHUART, "SW-");
             m_bSwitchSignal = false;
+            if(m_eSwitchState == ESwitchState::PRESSED) {
+               unSwitchPressedTime = GetTimer().GetMilliseconds();
+               fprintf(m_psHUART, "(SW PRESS)-");
+            }
+            else { 
+               /* switch was released */
+               if(m_cPowerManagementSystem.IsSystemPowerOn()) {
+                  if(GetTimer().GetMilliseconds() - unSwitchPressedTime > HARD_PWDN_PERIOD) {
+                     m_cPowerManagementSystem.SetActuatorPowerOn(false);
+                     m_cPowerManagementSystem.SetSystemPowerOn(false);
+                     fprintf(m_psHUART, "(HARD PWDN)-");
+                  }
+                  else {
+                     fprintf(m_psHUART, "(SOFT PWDN)-");
+                  }
+               }
+               else {
+                  /* System was off, turn it on */
+                  fprintf(m_psHUART, "(PWR ON)-");
+                  m_cPowerManagementSystem.SetSystemPowerOn(true);
+               }
+            }
          }
          if(m_bUSBSignal) {
             fprintf(m_psHUART, "USB-");

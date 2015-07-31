@@ -38,16 +38,13 @@ public:
       UNDER_VOLTAGE
    };
 
-   enum class EUSBInputLimit {
+   enum class EInputLimit {
+      L0,
       L100,
       L150,
       L500,
       L800,
       L900,
-      L1500
-   };
-
-   enum class EAdapterInputLimit {
       L1500,
       L2500
    };
@@ -62,11 +59,12 @@ public:
    void Synchronize();
 
    //void SetPreferredSource(ESource); //USB / ADAPTER
-   //void SetAdapterInputLimit(EAdapterInputLimit)
 
    void DumpRegister(uint8_t un_addr);
 
-   void SetUSBInputLimit(EUSBInputLimit e_usb_input_limit);
+   void SetInputLimit(ESource e_source, EInputLimit e_input_limit);
+
+   EInputLimit GetInputLimit(ESource e_source);
 
    void SetChargingEnable(bool b_enable);
 
@@ -80,33 +78,22 @@ public:
 
    void ResetWatchdogTimer();
 
-   EFault GetFault() {
-      return eFault;
-   }
+   EFault GetFault();
 
-   ESource GetSelectedSource() {
-      return eSelectedSource;
-   }
+   ESource GetSelectedSource();
+
+   ESource GetPreferredSource();
    
-   EDeviceState GetDeviceState() {
-      return eDeviceState;
-   }
+   EDeviceState GetDeviceState();
 
-   EInputState GetUSBInputState() {
-      return eUSBInputState;
-   }
-
-   EInputState GetAdapterInputState() {
-      return eAdapterInputState;
-   }
+   EInputState GetInputState(ESource e_source);
    
-   EBatteryState GetBatteryState() {
-      return eBatteryState;
-   }
+   EBatteryState GetBatteryState();
 
 private:
    EFault eFault;
    ESource eSelectedSource;
+   ESource ePreferredSource;
    EDeviceState eDeviceState;
    EInputState eAdapterInputState, eUSBInputState;
    EBatteryState eBatteryState;

@@ -14,6 +14,7 @@
 
 #define R0_WDT_RST_MASK 0x80
 #define R0_STAT_MASK 0x70
+#define R0_SUPPLY_MASK 0x08
 #define R0_FAULT_MASK 0x07
 
 #define R1_ADAPTER_STAT_MASK 0xC0
@@ -26,6 +27,8 @@
 #define R2_USB_INPUT_LIMIT_MASK 0x70
 #define R2_CHG_EN_MASK 0x02
 #define R2_TERM_EN_MASK 0x04
+
+#define R3_ADP_INPUT_LIMIT_MASK 0x02
 
 #define TERM_CURRENT_BASE 50
 #define TERM_CURRENT_OFFSET 50
@@ -63,44 +66,116 @@ void CBQ24161Module::DumpRegister(uint8_t un_addr) {
            CFirmware::GetInstance().GetTWController().Read());
 }
 
-void CBQ24161Module::SetUSBInputLimit(EUSBInputLimit e_usb_input_limit) {
+CBQ24161Module::EInputLimit CBQ24161Module::GetInputLimit(ESource e_source) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    CFirmware::GetInstance().GetTWController().Write(R2_ADDR);
    CFirmware::GetInstance().GetTWController().EndTransmission(false);
-   CFirmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 2, true);
 
-   uint8_t unRegVal = CFirmware::GetInstance().GetTWController().Read();
+   uint8_t punRegVals[2] = {
+      CFirmware::GetInstance().GetTWController().Read(),
+      CFirmware::GetInstance().GetTWController().Read()
+   };
+
+   switch(e_source) {
+   case ESource::USB:
+      punRegVals[0] &= R2_USB_INPUT_LIMIT_MASK;
+      switch(punRegVals[0] >> 4) {
+      case 0:
+         return EInputLimit::L100;
+         break;
+      case 1:
+         return EInputLimit::L150;
+         break;
+      case 2:
+         return EInputLimit::L500;
+         break;
+      case 3:
+         return EInputLimit::L800;
+         break;
+      case 4:
+         return EInputLimit::L900;
+         break;
+      case 5:
+         return EInputLimit::L1500;
+         break;
+      default:
+         return EInputLimit::L0;
+         break;
+      }
+      break;
+   case ESource::ADAPTER:
+      return ((punRegVals[1] & R3_ADP_INPUT_LIMIT_MASK) == 0) ? 
+         EInputLimit::L1500 : EInputLimit::L2500;
+      break;
+   default:
+      return EInputLimit::L0;
+      break;
+   }
+}
+
+void CBQ24161Module::SetInputLimit(ESource e_source, EInputLimit e_input_limit) {
+   CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(R2_ADDR);
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 2, true);
+
+   uint8_t punRegVals[2] = {
+      CFirmware::GetInstance().GetTWController().Read(),
+      CFirmware::GetInstance().GetTWController().Read()
+   };
 
    /* clear the reset bit, always set on read */
-   unRegVal &= ~R2_RST_MASK;
-   /* clear the USB input limit bits */
-   unRegVal &= ~R2_USB_INPUT_LIMIT_MASK;
+   punRegVals[0] &= ~R2_RST_MASK;
 
-   switch(e_usb_input_limit) {
-   case EUSBInputLimit::L100:
-      unRegVal |= (0 << 4);
+   switch(e_source) {
+   case ESource::USB:
+      /* clear the USB input limit bits */
+      punRegVals[0] &= ~R2_USB_INPUT_LIMIT_MASK;
+
+      switch(e_input_limit) {
+      case EInputLimit::L100:
+         punRegVals[0] |= (0 << 4);
+         break;
+      case EInputLimit::L150:
+         punRegVals[0] |= (1 << 4);
+         break;
+      case EInputLimit::L500:
+         punRegVals[0] |= (2 << 4);
+         break;
+      case EInputLimit::L800:
+         punRegVals[0] |= (3 << 4);
+         break;
+      case EInputLimit::L900:
+         punRegVals[0] |= (4 << 4);
+         break;
+      case EInputLimit::L1500:
+         punRegVals[0] |= (5 << 4);
+         break;
+      default:
+         /* by default apply the lowest setting 100mA */
+         punRegVals[0] |= (0 << 4);
+         break;
+      }
       break;
-   case EUSBInputLimit::L150:
-      unRegVal |= (1 << 4);
+   case ESource::ADAPTER:
+      if(e_input_limit == EInputLimit::L2500) {
+         punRegVals[1] |= R3_ADP_INPUT_LIMIT_MASK;
+      }
+      else {
+         /* else apply the lowest setting 1500mA */
+         punRegVals[1] &= ~R3_ADP_INPUT_LIMIT_MASK;
+      }
       break;
-   case EUSBInputLimit::L500:
-      unRegVal |= (2 << 4);
-      break;
-   case EUSBInputLimit::L800:
-      unRegVal |= (3 << 4);
-      break;
-   case EUSBInputLimit::L900:
-      unRegVal |= (4 << 4);
-      break;
-   case EUSBInputLimit::L1500:
-      unRegVal |= (5 << 4);
+   default:
       break;
    }
 
    /* write back */
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    CFirmware::GetInstance().GetTWController().Write(0x02);
-   CFirmware::GetInstance().GetTWController().Write(unRegVal);
+   CFirmware::GetInstance().GetTWController().Write(punRegVals[0]);
+   CFirmware::GetInstance().GetTWController().Write(punRegVals[1]);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
@@ -256,7 +331,11 @@ void CBQ24161Module::Synchronize() {
    punRegisters[0] = CFirmware::GetInstance().GetTWController().Read();
    punRegisters[1] = CFirmware::GetInstance().GetTWController().Read();
 
-   /* update the selected source variable */
+   /* update the preferred source variable */
+   ePreferredSource = (punRegisters[0] & R0_SUPPLY_MASK) ?
+      ESource::ADAPTER : ESource::USB;
+
+   /* update the selected source & state variables */
    switch((punRegisters[0] & R0_STAT_MASK) >> 4) {
    case 0x00:
       eSelectedSource = ESource::NONE;
@@ -368,3 +447,40 @@ void CBQ24161Module::Synchronize() {
       break;
    }
 }
+
+CBQ24161Module::EFault CBQ24161Module::GetFault() {
+   return eFault;
+}
+
+CBQ24161Module::ESource CBQ24161Module::GetSelectedSource() {
+   return eSelectedSource;
+}
+
+CBQ24161Module::ESource CBQ24161Module::GetPreferredSource() {
+   return ePreferredSource;
+}
+   
+CBQ24161Module::EDeviceState CBQ24161Module::GetDeviceState() {
+   return eDeviceState;
+}
+
+CBQ24161Module::EInputState CBQ24161Module::GetInputState(ESource e_source) {
+   switch(e_source) {
+   case ESource::ADAPTER:
+      return eAdapterInputState;
+      break;
+   case ESource::USB:
+      return eUSBInputState;
+      break;
+   default:
+      return EInputState::UNDER_VOLTAGE;
+      break;
+   }
+}
+   
+CBQ24161Module::EBatteryState CBQ24161Module::GetBatteryState() {
+   return eBatteryState;
+}
+
+
+

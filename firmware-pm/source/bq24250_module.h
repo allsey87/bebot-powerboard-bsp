@@ -28,7 +28,7 @@ public:
       FAULT
    };
 
-   enum class EInputCurrentLimit {
+   enum class EInputLimit {
       L100,
       L150,
       L500,
@@ -41,8 +41,8 @@ public:
    };
 
 
-   void EnableCharging();
-   void SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit);
+   void SetChargingEnable(bool b_enable);
+   void SetInputLimit(EInputLimit e_input_limit);
    
    void DumpRegister(uint8_t un_addr);
 

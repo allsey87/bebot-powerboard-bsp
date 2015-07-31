@@ -70,7 +70,7 @@ uint8_t CBQ24250Module::GetRegisterValue(uint8_t un_addr, uint8_t un_mask) {
    return unRegister;
 }
 
-void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit) {
+void CBQ24250Module::SetInputLimit(EInputLimit eInputLimit) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    CFirmware::GetInstance().GetTWController().Write(0x01);
    CFirmware::GetInstance().GetTWController().EndTransmission(false);
@@ -83,32 +83,32 @@ void CBQ24250Module::SetInputCurrentLimit(EInputCurrentLimit eInputCurrentLimit)
    unRegister &= ~R1_HIZ_MASK;
    unRegister &= ~R1_RST_MASK;
 
-   switch(eInputCurrentLimit) {
-   case EInputCurrentLimit::L100:
+   switch(eInputLimit) {
+   case EInputLimit::L100:
       unRegister |= (0x00 << 4);
       break;
-   case EInputCurrentLimit::L150:
+   case EInputLimit::L150:
       unRegister |= (0x01 << 4);
       break;
-   case EInputCurrentLimit::L500:
+   case EInputLimit::L500:
       unRegister |= (0x02 << 4);
       break;
-   case EInputCurrentLimit::L900:
+   case EInputLimit::L900:
       unRegister |= (0x03 << 4);
       break;
-   case EInputCurrentLimit::L1500:
+   case EInputLimit::L1500:
       unRegister |= (0x04 << 4);
       break;
-   case EInputCurrentLimit::L2000:
+   case EInputLimit::L2000:
       unRegister |= (0x05 << 4);
       break;
-   case EInputCurrentLimit::LEXT:
+   case EInputLimit::LEXT:
       unRegister |= (0x06 << 4);
       break;
-   case EInputCurrentLimit::LPTM:
+   case EInputLimit::LPTM:
       unRegister |= (0x07 << 4);
       break;
-   case EInputCurrentLimit::LHIZ:
+   case EInputLimit::LHIZ:
       unRegister |= R1_HIZ_MASK;
       break;
    }
@@ -135,7 +135,7 @@ void CBQ24250Module::ResetWatchdogTimer() {
 }
 
 
-void CBQ24250Module::EnableCharging() {
+void CBQ24250Module::SetChargingEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
    CFirmware::GetInstance().GetTWController().Write(0x01);
    CFirmware::GetInstance().GetTWController().EndTransmission(false);
@@ -146,8 +146,13 @@ void CBQ24250Module::EnableCharging() {
    /* assure reset is clear */
    unRegister &= ~R1_RST_MASK;
 
-   /* enable charging */
-   unRegister &= ~R1_CHGEN_MASK;
+   /* enable/disable charging */
+   if(b_enable) {
+      unRegister &= ~R1_CHGEN_MASK;
+   }
+   else {
+      unRegister |= R1_CHGEN_MASK;
+   }
 
    /* write back */
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24250_ADDR);
@@ -225,4 +230,3 @@ void CBQ24250Module::Synchronize() {
    bWatchdogEnabled = ((unRegister & R0_WDEN_MASK) != 0);
    bWatchdogFault = ((unRegister & R0_WDFAULT_MASK) != 0);
 }
-

@@ -1,14 +1,6 @@
 #ifndef POWER_MANAGEMENT_SYSTEM_H
 #define POWER_MANAGEMENT_SYSTEM_H
 
-#define SYS_BATT_REG_VOLTAGE 4200
-#define SYS_BATT_CHG_CURRENT 740
-#define SYS_BATT_TRM_CURRENT 50
-
-#define ACT_BATT_REG_VOLTAGE
-#define ACT_BATT_CHG_CURRENT
-#define ACT_BATT_TRM_CURRENT
-
 #include <stdint.h>
 #include <bq24161_module.h>
 #include <bq24250_module.h>
@@ -29,6 +21,10 @@ public:
    void SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on);
 
    bool IsUSBConnected();
+
+   bool IsSystemPowerOn();
+
+   bool IsActuatorPowerOn();
 
    void Update();
 
