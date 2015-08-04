@@ -37,6 +37,8 @@
 #define REG_VOLTAGE_BASE 20
 #define REG_VOLTAGE_OFFSET 3500
 
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::ResetWatchdogTimer() {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -52,8 +54,10 @@ void CBQ24161Module::ResetWatchdogTimer() {
    CFirmware::GetInstance().GetTWController().Write(R0_ADDR);
    CFirmware::GetInstance().GetTWController().Write(unRegVal);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
-
 }
+
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::DumpRegister(uint8_t un_addr) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -65,6 +69,9 @@ void CBQ24161Module::DumpRegister(uint8_t un_addr) {
            un_addr,
            CFirmware::GetInstance().GetTWController().Read());
 }
+
+/***********************************************************/
+/***********************************************************/
 
 CBQ24161Module::EInputLimit CBQ24161Module::GetInputLimit(ESource e_source) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -113,6 +120,9 @@ CBQ24161Module::EInputLimit CBQ24161Module::GetInputLimit(ESource e_source) {
       break;
    }
 }
+
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::SetInputLimit(ESource e_source, EInputLimit e_input_limit) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -179,6 +189,9 @@ void CBQ24161Module::SetInputLimit(ESource e_source, EInputLimit e_input_limit) 
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
+/***********************************************************/
+/***********************************************************/
+
 void CBQ24161Module::SetChargingEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
    CFirmware::GetInstance().GetTWController().Write(R2_ADDR);
@@ -186,6 +199,11 @@ void CBQ24161Module::SetChargingEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().Read(BQ24161_ADDR, 1, true);
 
    uint8_t unRegVal = CFirmware::GetInstance().GetTWController().Read();
+
+   /* Debug */
+   fprintf(CFirmware::GetInstance().m_psHUART,
+           "BQ24161: Charging -> %c\r\n",
+           (b_enable?'T':'F'));
 
    /* clear the reset bit, always set on read */
    unRegVal &= ~R2_RST_MASK;
@@ -201,6 +219,9 @@ void CBQ24161Module::SetChargingEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().Write(unRegVal);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
+
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::SetNoBattOperationEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -222,6 +243,9 @@ void CBQ24161Module::SetNoBattOperationEnable(bool b_enable) {
    CFirmware::GetInstance().GetTWController().Write(unRegVal);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
+
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv) {
    /* check if the requested voltage is in range */
@@ -255,6 +279,9 @@ void CBQ24161Module::SetBatteryRegulationVoltage(uint16_t un_batt_voltage_mv) {
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
+/***********************************************************/
+/***********************************************************/
+
 void CBQ24161Module::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma) {
    /* check if the requested current is in range */
    if(un_batt_chrg_current_ma < CHRG_CURRENT_OFFSET ||
@@ -286,6 +313,9 @@ void CBQ24161Module::SetBatteryChargingCurrent(uint16_t un_batt_chrg_current_ma)
    CFirmware::GetInstance().GetTWController().Write(unRegVal);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
+
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::SetBatteryTerminationCurrent(uint16_t un_batt_term_current_ma) {
    /* check if the requested current is in range */
@@ -319,6 +349,8 @@ void CBQ24161Module::SetBatteryTerminationCurrent(uint16_t un_batt_term_current_
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
+/***********************************************************/
+/***********************************************************/
 
 void CBQ24161Module::Synchronize() {
    CFirmware::GetInstance().GetTWController().BeginTransmission(BQ24161_ADDR);
@@ -448,21 +480,36 @@ void CBQ24161Module::Synchronize() {
    }
 }
 
+/***********************************************************/
+/***********************************************************/
+
 CBQ24161Module::EFault CBQ24161Module::GetFault() {
    return eFault;
 }
+
+/***********************************************************/
+/***********************************************************/
 
 CBQ24161Module::ESource CBQ24161Module::GetSelectedSource() {
    return eSelectedSource;
 }
 
+/***********************************************************/
+/***********************************************************/
+
 CBQ24161Module::ESource CBQ24161Module::GetPreferredSource() {
    return ePreferredSource;
 }
+
+/***********************************************************/
+/***********************************************************/
    
 CBQ24161Module::EDeviceState CBQ24161Module::GetDeviceState() {
    return eDeviceState;
 }
+
+/***********************************************************/
+/***********************************************************/
 
 CBQ24161Module::EInputState CBQ24161Module::GetInputState(ESource e_source) {
    switch(e_source) {
@@ -477,6 +524,9 @@ CBQ24161Module::EInputState CBQ24161Module::GetInputState(ESource e_source) {
       break;
    }
 }
+
+/***********************************************************/
+/***********************************************************/
    
 CBQ24161Module::EBatteryState CBQ24161Module::GetBatteryState() {
    return eBatteryState;

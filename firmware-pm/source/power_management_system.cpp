@@ -31,6 +31,7 @@
 /* Power requirements for various parts of the system */
 #define SYS_POWER_REQ 750
 #define ACT_POWER_REQ 1500
+#define SYS_ACT_PASSTHROUGH_LOSS 150
 
 /* Battery parameters */
 #define SYS_BATT_REG_VOLTAGE 4200
@@ -38,12 +39,14 @@
 #define SYS_BATT_CHG_CURRENT 740
 #define SYS_BATT_TRM_CURRENT 50
 #define SYS_BATT_LOW_VOLTAGE 3200
+#define SYS_BATT_NOTPRESENT_VOLTAGE 500
 
 #define ACT_BATT_REG_VOLTAGE 4200
 #define ACT_BATT_INIT_CHG_VOLTAGE 4000
 #define ACT_BATT_CHG_CURRENT 370
 #define ACT_BATT_TRM_CURRENT 50
 #define ACT_BATT_LOW_VOLTAGE 3200
+#define ACT_BATT_NOTPRESENT_VOLTAGE 100
 
 /***********************************************************/
 /***********************************************************/
@@ -63,12 +66,12 @@ void CPowerManagementSystem::Init() {
    SetSystemPowerOn(true);
 
    /* Init output control pins - this overrides hardware pull ups / downs */
-   DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN | PIN_PASSTHROUGH_EN);
+   DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN); //| PIN_PASSTHROUGH_EN);
    
    m_cActuatorPowerManager.SetInputLimit(CBQ24250Module::EInputLimit::LHIZ);
 
    m_cSystemPowerManager.SetChargingEnable(false);
-   m_cActuatorPowerManager.SetChargingEnable(false);
+   m_cActuatorPowerManager.SetChargingEnable(true);
 
    m_cSystemPowerManager.SetBatteryRegulationVoltage(SYS_BATT_REG_VOLTAGE);
    m_cSystemPowerManager.SetBatteryChargingCurrent(SYS_BATT_CHG_CURRENT);
@@ -104,11 +107,14 @@ void CPowerManagementSystem::SetActuatorPowerOn(bool b_set_power_on) {
 /***********************************************************/
 /***********************************************************/
 
+/* Disabled */
 void CPowerManagementSystem::SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on) {
+   /*
    if(b_set_power_on)
       PORTD |= PIN_PASSTHROUGH_EN;
    else
       PORTD &= ~PIN_PASSTHROUGH_EN;
+   */
 }
 
 /***********************************************************/
@@ -145,6 +151,7 @@ void CPowerManagementSystem::Update() {
       m_cInputStatusLEDs.SetLEDMode(ADP_LED_INDEX, CPCA9633Module::ELEDMode::OFF);
       break;
    default:
+      /* Indicate error condition */
       m_cInputStatusLEDs.SetLEDMode(ADP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
       break;
    }
@@ -172,8 +179,8 @@ void CPowerManagementSystem::Update() {
          break;
       default:
          /* Indicate error condition */
-         m_cInputStatusLEDs.SetLEDMode(USB_LP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
-         m_cInputStatusLEDs.SetLEDMode(USB_HP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
+         m_cInputStatusLEDs.SetLEDMode(USB_LP_LED_INDEX, CPCA9633Module::ELEDMode::OFF);
+         m_cInputStatusLEDs.SetLEDMode(USB_HP_LED_INDEX, CPCA9633Module::ELEDMode::OFF);
          m_cInputStatusLEDs.SetLEDMode(USB_FP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
          break;
       }
@@ -185,8 +192,8 @@ void CPowerManagementSystem::Update() {
       break;
    default:
       /* Indicate error condition */
-      m_cInputStatusLEDs.SetLEDMode(USB_LP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
-      m_cInputStatusLEDs.SetLEDMode(USB_HP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
+      m_cInputStatusLEDs.SetLEDMode(USB_LP_LED_INDEX, CPCA9633Module::ELEDMode::OFF);
+      m_cInputStatusLEDs.SetLEDMode(USB_HP_LED_INDEX, CPCA9633Module::ELEDMode::OFF);
       m_cInputStatusLEDs.SetLEDMode(USB_FP_LED_INDEX, CPCA9633Module::ELEDMode::BLINK);
       break;
    }
@@ -245,7 +252,7 @@ void CPowerManagementSystem::Update() {
             unAvailableCurrent = 2500;
             break;
          }
-         /* At this point we have a valid input source selected, break the loop */
+         /* At this point we have a valid input source selected, terminate the search */
          if(unAvailableCurrent > 0) break;
       }
    }
@@ -261,32 +268,44 @@ void CPowerManagementSystem::Update() {
       if(unAvailableCurrent > SYS_POWER_REQ) {
          unAvailableCurrent -= SYS_POWER_REQ;
       }
+      else {
+         unAvailableCurrent = 0;
+      }
    }
 
-   /* Enable charging the system battery if at least half of the charge current 
+   /* Enable charging the system battery if at least a third of the charging current 
       is available. BQ24161 automatically prioritizes system power. */
    if(m_cSystemPowerManager.GetBatteryState() != CBQ24161Module::EBatteryState::NORMAL ||
       m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_FAULT ||
       m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_THERMAL_SHDN) {
-      /* There is an issue with the battery */
-      m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
-      m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);    
+      /* Terminate charging */
+      m_cSystemPowerManager.SetChargingEnable(false);
+      m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+      /* Depending on the battery voltage, it is either not present or we have an actual fault */
+      if(m_unSystemBatteryVoltage < SYS_BATT_NOTPRESENT_VOLTAGE) {
+         /* Battery isn't present */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::OFF);
+      }
+      else {
+         /* indicate error condition */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
+      }
    }
    else {
       /* If the battery is above SYS_BATT_INIT_CHG_VOLTAGE */
       if(m_unSystemBatteryVoltage > SYS_BATT_INIT_CHG_VOLTAGE) {
          /* Battery is charged or being charged */
          if(m_cSystemPowerManager.GetDeviceState() == CBQ24161Module::EDeviceState::CHARGING) {
-            /* Terminate charging if available current drops below a third the charge current */
-            if(unAvailableCurrent < (SYS_BATT_CHG_CURRENT / 3)) {             
-               m_cSystemPowerManager.SetChargingEnable(false);
-               m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::ON);
+            /* Continue charging while available current is above a third the charging current */
+            if(unAvailableCurrent > (SYS_BATT_CHG_CURRENT / 3)) {             
+               unAvailableCurrent -= (SYS_BATT_CHG_CURRENT / 3);
+               m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
                m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
             }
             else {
-               /* Continue charging */
-               unAvailableCurrent -= (SYS_BATT_CHG_CURRENT / 3);
-               m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
+               /* Terminate charging */
+               m_cSystemPowerManager.SetChargingEnable(false);
+               m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
                m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
             }
          }
@@ -318,36 +337,135 @@ void CPowerManagementSystem::Update() {
       }
    }
 
-   /* Depending on the remaining current, enable the system to actuator power passthrough */
-   CBQ24250Module::EInputLimit eInputLimit = CBQ24250Module::EInputLimit::LHIZ;
-
-   if(unAvailableCurrent > 2250) {
-      eInputLimit = CBQ24250Module::EInputLimit::L2000;
-   } else if(unAvailableCurrent > 1750) {
-      eInputLimit = CBQ24250Module::EInputLimit::L1500;
-   } else if(unAvailableCurrent > 1150) {
-      eInputLimit = CBQ24250Module::EInputLimit::L900;
-   } else if(unAvailableCurrent > 750) {
-      eInputLimit = CBQ24250Module::EInputLimit::L500;
-   } else if(unAvailableCurrent > 300) {
-      eInputLimit = CBQ24250Module::EInputLimit::L500;
+   /* Deduct a passthrough loss from the available current to compensate for regulation losses 
+      and ensure system stability */
+   if(unAvailableCurrent > SYS_ACT_PASSTHROUGH_LOSS) {
+      unAvailableCurrent -= SYS_ACT_PASSTHROUGH_LOSS;
+   }
+   else {
+      unAvailableCurrent = 0;
    }
 
-   if(eInputLimit == CBQ24250Module::EInputLimit::LHIZ);
-
+   /* eInputLimit defines the remaining power that we could forward to the actuator system */
+   CBQ24250Module::EInputLimit eActuatorInputLimit;
+   /* Select eInputLimit, depending on the remaining current */
+   if(unAvailableCurrent > 2000) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L2000;
+   } 
+   else if(unAvailableCurrent > 1500) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L1500;
+   } 
+   else if(unAvailableCurrent > 900) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L900;
+   } 
+   else if(unAvailableCurrent > 500) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
+   } 
+   else if(unAvailableCurrent > 100) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L100;
+   } 
+   else {
+      /* If the remaining current on the system line is less than 100mA there is no point 
+         forwarding it to the actuator system */
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::LHIZ;
+      unAvailableCurrent = 0;
+   }
+   /* Set the input limit */
+   m_cActuatorPowerManager.SetInputLimit(eActuatorInputLimit);
+   /* Given available current, pass it through to the actuator system */
+   if(unAvailableCurrent > 0) {
+      SetSystemToActuatorPassthroughPowerOn(true);
+   } else {
+      SetSystemToActuatorPassthroughPowerOn(false);
+   }
+      
    /* Allocate power to the actuators if switched on */
    if(IsActuatorPowerOn()) {
       if(unAvailableCurrent > ACT_POWER_REQ) {
          unAvailableCurrent -= ACT_POWER_REQ;
-         m_cActuatorPowerManager.SetInputLimit(CBQ24250Module::EInputLimit::L1500);
-         //SetSystemToActuatorPassthroughPowerOn(true);
+      }
+      else {
+         unAvailableCurrent = 0;
       }
    }
 
-
-   /* Configure status LEDs */
-            
-   //if both batteries charged, or no source connected AND system powered off, enter low power mode
+   /* Enable charging the actuator battery if at least a third of the charging current 
+      is available. BQ24250 automatically prioritizes actuator power. */
+   switch(m_cActuatorPowerManager.GetDeviceState()) {
+   case CBQ24250Module::EDeviceState::FAULT:
+      /* Fault condition - terminate charging */
+      m_cActuatorPowerManager.SetChargingEnable(false);
+      if(m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_OVER_VOLTAGE || 
+         m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_DISCONNECTED) {
+         /* Battery fault */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
+      }
+      else if(m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_THERMAL_SHDN) {
+         /* Terminate charging */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+         /* Handle special case, since disconnected battery removes thermistor network 
+            generating a BATT_THERMAL_SHDN fault */
+         if(m_unActuatorBatteryVoltage < ACT_BATT_NOTPRESENT_VOLTAGE) {
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::OFF);
+         }
+         else {
+            /* We have an actual thermal fault */
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::BLINK);
+         }
+      }
+      else {
+         /* All other faults are considered charger faults */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
+         /* Indicate if the battery is present */
+         if(m_unActuatorBatteryVoltage < ACT_BATT_NOTPRESENT_VOLTAGE) {
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::OFF);
+         }
+         else {
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
+         }
+      }
+      break;
+   case CBQ24250Module::EDeviceState::READY:
+      if(m_unActuatorBatteryVoltage > ACT_BATT_NOTPRESENT_VOLTAGE) {
+         /* Indicate battery is present */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
+         if(m_unActuatorBatteryVoltage < ACT_BATT_INIT_CHG_VOLTAGE &&
+            unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {             
+            unAvailableCurrent -= (ACT_BATT_CHG_CURRENT / 3);
+            m_cActuatorPowerManager.SetChargingEnable(true);
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
+         }
+         else {
+            m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+         }
+      }
+      else { 
+         /* m_unActuatorBatteryVoltage <= ACT_BATT_NOTPRESENT_VOLTAGE */
+         m_cActuatorPowerManager.SetChargingEnable(false);
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::OFF);
+      }
+      break;
+   case CBQ24250Module::EDeviceState::CHARGING:
+      m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
+      if(unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {             
+         unAvailableCurrent -= (ACT_BATT_CHG_CURRENT / 3);
+         /* since we are in the charging state, there should be no need to execute 
+            m_cActuatorPowerManager.SetChargingEnable(true) here */
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
+      }
+      else {
+         m_cActuatorPowerManager.SetChargingEnable(false);
+         m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+      }
+      break;
+   case CBQ24250Module::EDeviceState::DONE:
+      m_cActuatorPowerManager.SetChargingEnable(false);
+      m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
+      m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
+      break;
+   }
 }
 
 /***********************************************************/
@@ -362,6 +480,12 @@ bool CPowerManagementSystem::IsUSBConnected() {
 /***********************************************************/
 
 void CPowerManagementSystem::PrintStatus() {
+   fprintf(CFirmware::GetInstance().m_psHUART, "<Power Domains>\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "system: %s\r\n",
+           IsSystemPowerOn()?"on":"off");
+   fprintf(CFirmware::GetInstance().m_psHUART, "actuators: %s\r\n",
+           IsActuatorPowerOn()?"on":"off");
+   fprintf(CFirmware::GetInstance().m_psHUART, "<Batteries>\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, "Batt 1: %u\r\n",
            m_cADCController.GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF);
    fprintf(CFirmware::GetInstance().m_psHUART, "Batt 2: %u\r\n",
@@ -449,7 +573,8 @@ void CPowerManagementSystem::PrintStatus() {
       fprintf(CFirmware::GetInstance().m_psHUART, "UV");
       break;
    }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\nusb input: ");
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "USB input: ");
    switch(m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::USB)) {
    case CBQ24161Module::EInputState::NORMAL:
       fprintf(CFirmware::GetInstance().m_psHUART, "OK");
@@ -481,6 +606,36 @@ void CPowerManagementSystem::PrintStatus() {
       break;
    }
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "input_limit: ");
+   switch(m_cSystemPowerManager.GetInputLimit(
+          m_cSystemPowerManager.GetSelectedSource())) {
+   case CBQ24161Module::EInputLimit::L0:
+      fprintf(CFirmware::GetInstance().m_psHUART, "0");
+      break;
+   case CBQ24161Module::EInputLimit::L100:
+      fprintf(CFirmware::GetInstance().m_psHUART, "100");
+      break;
+   case CBQ24161Module::EInputLimit::L150:
+      fprintf(CFirmware::GetInstance().m_psHUART, "150");
+      break;
+   case CBQ24161Module::EInputLimit::L500:
+      fprintf(CFirmware::GetInstance().m_psHUART, "500");
+      break;
+   case CBQ24161Module::EInputLimit::L800:
+      fprintf(CFirmware::GetInstance().m_psHUART, "800");
+      break;
+   case CBQ24161Module::EInputLimit::L900:
+      fprintf(CFirmware::GetInstance().m_psHUART, "900");
+      break;
+   case CBQ24161Module::EInputLimit::L1500:
+      fprintf(CFirmware::GetInstance().m_psHUART, "1500");
+      break;
+   case CBQ24161Module::EInputLimit::L2500:
+      fprintf(CFirmware::GetInstance().m_psHUART, "2500");
+      break;
+   }
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+
    /* Actuator power manager */
    m_cActuatorPowerManager.Synchronize();
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
@@ -545,11 +700,42 @@ void CPowerManagementSystem::PrintStatus() {
       break;
    }
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
+   fprintf(CFirmware::GetInstance().m_psHUART, "input_limit: ");
+   switch(m_cActuatorPowerManager.GetInputLimit()) {
+   case CBQ24250Module::EInputLimit::L100:
+      fprintf(CFirmware::GetInstance().m_psHUART, "100");
+      break;
+   case CBQ24250Module::EInputLimit::L150:
+      fprintf(CFirmware::GetInstance().m_psHUART, "150");
+      break;
+   case CBQ24250Module::EInputLimit::L500:
+      fprintf(CFirmware::GetInstance().m_psHUART, "500");
+      break;
+   case CBQ24250Module::EInputLimit::L900:
+      fprintf(CFirmware::GetInstance().m_psHUART, "900");
+      break;
+   case CBQ24250Module::EInputLimit::L1500:
+      fprintf(CFirmware::GetInstance().m_psHUART, "1500");
+      break;
+   case CBQ24250Module::EInputLimit::L2000:
+      fprintf(CFirmware::GetInstance().m_psHUART, "2000");
+      break;
+   case CBQ24250Module::EInputLimit::LEXT:
+      fprintf(CFirmware::GetInstance().m_psHUART, "EXT");
+      break;
+   case CBQ24250Module::EInputLimit::LPTM:
+      fprintf(CFirmware::GetInstance().m_psHUART, "PTM");
+      break;
+   case CBQ24250Module::EInputLimit::LHIZ:
+      fprintf(CFirmware::GetInstance().m_psHUART, "HIZ");
+      break;
+   }
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, 
-           "WD EN = %c\r\n", 
+           "wd_en: %c\r\n", 
            m_cActuatorPowerManager.GetWatchdogEnabled()?'t':'f');
    fprintf(CFirmware::GetInstance().m_psHUART, 
-           "WD FAULT = %c\r\n", 
+           "wd_fault: %c\r\n", 
            m_cActuatorPowerManager.GetWatchdogFault()?'t':'f');
 }
 

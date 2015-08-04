@@ -15,7 +15,7 @@
 /***********************************************************/
 
 #define SYNC_PERIOD 10000
-#define HARD_PWDN_PERIOD 2500
+#define HARD_PWDN_PERIOD 750
 
 /***********************************************************/
 /***********************************************************/
@@ -169,12 +169,15 @@ void CFirmware::Exec()
             fprintf(m_psHUART, "USB-");
             m_bUSBSignal = false;
          }
-         if(m_bSystemPowerSignal) { 
-            fprintf(m_psHUART, "PSYS-");
+         if(m_bSystemPowerSignal || m_bActuatorPowerSignal) { 
+            fprintf(m_psHUART, "%s%s", 
+                    m_bSystemPowerSignal ? "PSYS-" : "",
+                    m_bActuatorPowerSignal ? "PACT-" : "");
             m_bSystemPowerSignal = false;
+            m_bActuatorPowerSignal = false;
+            /* force an update */
+            unLastSyncTime = GetTimer().GetMilliseconds() - (SYNC_PERIOD + 1);
          }
-         if(m_bActuatorPowerSignal) 
-            fprintf(m_psHUART, "PACT-");
          fprintf(m_psHUART, "\r\n");
       }
 

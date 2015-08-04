@@ -43,6 +43,8 @@ public:
 
    void SetChargingEnable(bool b_enable);
    void SetInputLimit(EInputLimit e_input_limit);
+
+   EInputLimit GetInputLimit();
    
    void DumpRegister(uint8_t un_addr);
 
