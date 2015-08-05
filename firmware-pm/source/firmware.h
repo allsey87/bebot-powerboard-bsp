@@ -113,7 +113,7 @@ private:
    enum class ESwitchState {
       PRESSED,
       RELEASED,
-   } m_eSwitchState;
+   } m_eSwitchState = ESwitchState::RELEASED;
 
    uint32_t m_unSwitchPressedTime;
    

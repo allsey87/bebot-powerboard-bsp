@@ -14,7 +14,7 @@
 /***********************************************************/
 /***********************************************************/
 
-#define SYNC_PERIOD 10000
+#define SYNC_PERIOD 5000
 #define HARD_PWDN_PERIOD 750
 
 /***********************************************************/
@@ -130,39 +130,34 @@ void CFirmware::Exec()
    uint32_t unSwitchPressedTime = 0;
    uint8_t unInput = 0;
    bool bPrintPrompt = true;
+   bool bSyncRequiredSignal = false;
 
    PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN); 
    DDRB |= UIS_NRST_PIN | UIS_EN_PIN;
 
+   /* Bring up USB hub */
+   PORTB |= (UIS_EN_PIN);
+   GetTimer().Delay(100);
+   PORTB |= (UIS_NRST_PIN);
+   GetTimer().Delay(100);
+   m_cUSBInterfaceSystem.Enable();
+   GetTimer().Delay(100);
+
    m_cPowerManagementSystem.Init();
+   m_cPowerEventInterrupt.Enable();
 
    for(;;) {
+      /* Respond to interrupt signals */
       if(m_bSwitchSignal || m_bUSBSignal || m_bSystemPowerSignal || m_bActuatorPowerSignal) {
          fprintf(m_psHUART, "IRQs (0x%02x): ", PINC);
          if(m_bSwitchSignal) {
-            fprintf(m_psHUART, "SW-");
             m_bSwitchSignal = false;
             if(m_eSwitchState == ESwitchState::PRESSED) {
                unSwitchPressedTime = GetTimer().GetMilliseconds();
-               fprintf(m_psHUART, "(SW PRESS)-");
+               fprintf(m_psHUART, "SW(PRESS)-");
             }
-            else { 
-               /* switch was released */
-               if(m_cPowerManagementSystem.IsSystemPowerOn()) {
-                  if(GetTimer().GetMilliseconds() - unSwitchPressedTime > HARD_PWDN_PERIOD) {
-                     m_cPowerManagementSystem.SetActuatorPowerOn(false);
-                     m_cPowerManagementSystem.SetSystemPowerOn(false);
-                     fprintf(m_psHUART, "(HARD PWDN)-");
-                  }
-                  else {
-                     fprintf(m_psHUART, "(SOFT PWDN)-");
-                  }
-               }
-               else {
-                  /* System was off, turn it on */
-                  fprintf(m_psHUART, "(PWR ON)-");
-                  m_cPowerManagementSystem.SetSystemPowerOn(true);
-               }
+            else {
+               fprintf(m_psHUART, "SW(RELEASE)-");
             }
          }
          if(m_bUSBSignal) {
@@ -175,18 +170,43 @@ void CFirmware::Exec()
                     m_bActuatorPowerSignal ? "PACT-" : "");
             m_bSystemPowerSignal = false;
             m_bActuatorPowerSignal = false;
-            /* force an update */
-            unLastSyncTime = GetTimer().GetMilliseconds() - (SYNC_PERIOD + 1);
+            /* assert the sync required signal */
+            bSyncRequiredSignal = true;
          }
          fprintf(m_psHUART, "\r\n");
       }
 
       /* Check if an update is required */
-      if((GetTimer().GetMilliseconds() - unLastSyncTime > SYNC_PERIOD)) {
+      if((GetTimer().GetMilliseconds() - unLastSyncTime > SYNC_PERIOD) || bSyncRequiredSignal) {
          /* Update last sync time variable */
          unLastSyncTime = GetTimer().GetMilliseconds();
+         /* Deassert the sync required signal */
+         bSyncRequiredSignal = false;
          /* Run the update loop for the power mangement system */
          m_cPowerManagementSystem.Update();
+      }
+
+      if(m_eSwitchState == ESwitchState::PRESSED) {
+         if(m_cPowerManagementSystem.IsSystemPowerOn()) {
+            if(GetTimer().GetMilliseconds() - unSwitchPressedTime > HARD_PWDN_PERIOD) {
+               /* hard power down */
+               m_cPowerManagementSystem.SetActuatorPowerOn(false);
+               m_cPowerManagementSystem.SetSystemPowerOn(false);
+               /* Set m_eSwitchState to ESwitchState::RELEASED indicate that the switch
+                  pressed event has been handled */
+               m_eSwitchState = ESwitchState::RELEASED;
+               /* Assert the sync required signal */
+               bSyncRequiredSignal = true;
+            }
+         }
+         else { /* !m_cPowerManagementSystem.IsSystemPowerOn() */
+            m_cPowerManagementSystem.SetSystemPowerOn(true);
+            /* Set m_eSwitchState to ESwitchState::RELEASED indicate that the switch
+               pressed event has been handled */
+            m_eSwitchState = ESwitchState::RELEASED;
+            /* Assert the sync required signal */
+            bSyncRequiredSignal = true;
+         }
       }
 
       if(bPrintPrompt) {
@@ -216,7 +236,7 @@ void CFirmware::Exec()
          case 'x':
             m_cPowerEventInterrupt.Disable();
             break;
-         case 'd':
+         case 'p':
             m_cPowerManagementSystem.PrintStatus();
             break;
          case 'e':
@@ -245,3 +265,4 @@ void CFirmware::Exec()
 
 /***********************************************************/
 /***********************************************************/
+
