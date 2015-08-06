@@ -230,6 +230,12 @@ void CFirmware::Exec()
       if(unInput != 0) {
          fprintf(m_psHUART, "\r\n");
          switch(unInput) {
+         case 'A':
+            m_cPowerManagementSystem.SetActuatorPowerOn(true);
+            break;
+         case 'a':
+            m_cPowerManagementSystem.SetActuatorPowerOn(false);
+            break;
          case 'X':
             m_cPowerEventInterrupt.Enable();
             break;

@@ -89,16 +89,16 @@ void CPowerManagementSystem::Init() {
 
 void CPowerManagementSystem::SetSystemPowerOn(bool b_set_power_on) {
    if(b_set_power_on) {
-      PORTD |= PIN_SYSTEM_EN;
       fprintf(CFirmware::GetInstance().m_psHUART, 
               "SYS(%s->ON)\r\n",
               IsSystemPowerOn()?"ON":"OFF");
+      PORTD |= PIN_SYSTEM_EN;
    }
    else {
-      PORTD &= ~PIN_SYSTEM_EN;
       fprintf(CFirmware::GetInstance().m_psHUART, 
               "SYS(%s->OFF)\r\n",
               IsSystemPowerOn()?"ON":"OFF");
+      PORTD &= ~PIN_SYSTEM_EN;
    }
 }
 
@@ -107,16 +107,16 @@ void CPowerManagementSystem::SetSystemPowerOn(bool b_set_power_on) {
 
 void CPowerManagementSystem::SetActuatorPowerOn(bool b_set_power_on) {
    if(b_set_power_on) {
-      PORTD |= PIN_ACTUATORS_EN;
       fprintf(CFirmware::GetInstance().m_psHUART, 
               "ACT(%s->ON)\r\n",
               IsActuatorPowerOn()?"ON":"OFF");
+      PORTD |= PIN_ACTUATORS_EN;
    }
    else {
-      PORTD &= ~PIN_ACTUATORS_EN;
       fprintf(CFirmware::GetInstance().m_psHUART, 
               "ACT(%s->OFF)\r\n",
               IsActuatorPowerOn()?"ON":"OFF");
+      PORTD &= ~PIN_ACTUATORS_EN;
    }
 }
 
