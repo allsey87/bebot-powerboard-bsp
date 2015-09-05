@@ -48,14 +48,21 @@ void CPacketControlInterface::SendAck(const CPacket& c_packet,
 void CPacketControlInterface::Reset() {
    m_unRxBufferPointer = 0;
    m_unUsedBufferLength = 0;
+   m_unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
    m_eState = EState::SRCH_PREAMBLE1;
 }
    
 void CPacketControlInterface::ProcessInput() {
    bool bBufOverflow = false;
    uint8_t unRxByte = 0;
-   uint8_t unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
-  
+   uint8_t m_unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
+ 
+
+   if(m_eState == EState::RECV_COMMAND) {
+      bBufOverflow = true;
+      m_eState = EState::SRCH_PREAMBLE1;
+   }
+ 
    while(m_eState != EState::RECV_COMMAND) {
       /* Check if the buffer has overflown */
       if(bBufOverflow) {
@@ -69,23 +76,23 @@ void CPacketControlInterface::ProcessInput() {
          /* Search for the beginning of a preamble in buffer */
          // m_unUsedBufferLength => max index of valid data
          //m_unRxBufferPointer 0> current position
-         for(unReparseOffset = 1; unReparseOffset < m_unUsedBufferLength; unReparseOffset++) {
-            if(m_punRxBuffer[unReparseOffset] == PREAMBLE1)
+         for(m_unReparseOffset = 1; m_unReparseOffset < m_unUsedBufferLength; m_unReparseOffset++) {
+            if(m_punRxBuffer[m_unReparseOffset] == PREAMBLE1)
                break;
          }
 
-         fprintf(Firmware::GetInstance().m_psHUART, "m_unUsedBufferLength = %u, unReparseOffset = %u\r\n", m_unUsedBufferLength, unReparseOffset);
+         fprintf(Firmware::GetInstance().m_psHUART, "m_unUsedBufferLength = %u, m_unReparseOffset = %u\r\n", m_unUsedBufferLength, m_unReparseOffset);
 
 
          /* Shift data down in buffer */
-         for(uint8_t unBufferIdx = unReparseOffset;
+         for(uint8_t unBufferIdx = m_unReparseOffset;
              unBufferIdx < m_unUsedBufferLength;
              unBufferIdx++) {
-            fprintf(Firmware::GetInstance().m_psHUART, "*\r\n", RX_COMMAND_BUFFER_LENGTH, unReparseOffset);
-            m_punRxBuffer[unBufferIdx - unReparseOffset] = m_punRxBuffer[unBufferIdx];
+            fprintf(Firmware::GetInstance().m_psHUART, "*\r\n", RX_COMMAND_BUFFER_LENGTH, m_unReparseOffset);
+            m_punRxBuffer[unBufferIdx - m_unReparseOffset] = m_punRxBuffer[unBufferIdx];
          }
 
-         m_unUsedBufferLength -= unReparseOffset;
+         m_unUsedBufferLength -= m_unReparseOffset;
 
          /* The overflow has been handled */
          bBufOverflow = false;
@@ -121,9 +128,9 @@ void CPacketControlInterface::ProcessInput() {
       
       fprintf(Firmware::GetInstance().m_psHUART, 
               "m_unUsedBufferLength = %u\r\n"
-              "unReparseOffset = %u\r\n"
+              "m_unReparseOffset = %u\r\n"
               "m_unRxBufferPointer = %u\r\n",
-              m_unUsedBufferLength, unReparseOffset, m_unRxBufferPointer);
+              m_unUsedBufferLength, m_unReparseOffset, m_unRxBufferPointer);
 
 
       //////////////
