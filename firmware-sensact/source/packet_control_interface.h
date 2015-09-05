@@ -72,6 +72,7 @@ public:
    CPacketControlInterface(CHUARTController& c_controller) :
       m_eState(EState::SRCH_PREAMBLE1),
       m_unRxBufferPointer(0),
+      m_unUsedBufferLength(0),
       m_cPacket(0xFF, 0, 0),
       m_cController(c_controller) {}
 
@@ -99,6 +100,7 @@ private:
    EState m_eState;
 
    uint8_t m_unRxBufferPointer;
+   uint8_t m_unUsedBufferLength;
    uint8_t m_punRxBuffer[RX_COMMAND_BUFFER_LENGTH];
    
    CPacket m_cPacket;
