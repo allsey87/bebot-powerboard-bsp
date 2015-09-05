@@ -53,98 +53,57 @@ void CPacketControlInterface::Reset() {
 }
    
 void CPacketControlInterface::ProcessInput() {
-   bool bBufOverflow = false;
+   bool bBufAdjustReq = false;
    uint8_t unRxByte = 0;
    uint8_t m_unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
  
 
    if(m_eState == EState::RECV_COMMAND) {
-      bBufOverflow = true;
+      bBufAdjustReq = true;
       m_eState = EState::SRCH_PREAMBLE1;
    }
  
    while(m_eState != EState::RECV_COMMAND) {
       /* Check if the buffer has overflown */
-      if(bBufOverflow) {
-         //////////////
-         fprintf(Firmware::GetInstance().m_psHUART, "Old Buf = [ ");
-         for(uint8_t unIdx = 0; unIdx < RX_COMMAND_BUFFER_LENGTH; unIdx++) {
-            fprintf(Firmware::GetInstance().m_psHUART, "0x%02x ", m_punRxBuffer[unIdx]);        
-         }
-         fprintf(Firmware::GetInstance().m_psHUART, "]\r\n");
-         //////////////
+      if(bBufAdjustReq) {
          /* Search for the beginning of a preamble in buffer */
-         // m_unUsedBufferLength => max index of valid data
-         //m_unRxBufferPointer 0> current position
          for(m_unReparseOffset = 1; m_unReparseOffset < m_unUsedBufferLength; m_unReparseOffset++) {
             if(m_punRxBuffer[m_unReparseOffset] == PREAMBLE1)
                break;
          }
-
-         fprintf(Firmware::GetInstance().m_psHUART, "m_unUsedBufferLength = %u, m_unReparseOffset = %u\r\n", m_unUsedBufferLength, m_unReparseOffset);
-
-
          /* Shift data down in buffer */
          for(uint8_t unBufferIdx = m_unReparseOffset;
              unBufferIdx < m_unUsedBufferLength;
              unBufferIdx++) {
-            fprintf(Firmware::GetInstance().m_psHUART, "*\r\n", RX_COMMAND_BUFFER_LENGTH, m_unReparseOffset);
             m_punRxBuffer[unBufferIdx - m_unReparseOffset] = m_punRxBuffer[unBufferIdx];
          }
 
          m_unUsedBufferLength -= m_unReparseOffset;
 
          /* The overflow has been handled */
-         bBufOverflow = false;
+         bBufAdjustReq = false;
          /* Reparse the buffer */
          m_unRxBufferPointer = 0;
          m_eState = EState::SRCH_PREAMBLE1;
-
-         //////////////
-         fprintf(Firmware::GetInstance().m_psHUART, "New Buf = [ ");
-         for(uint8_t unIdx = 0; unIdx < RX_COMMAND_BUFFER_LENGTH; unIdx++) {
-            fprintf(Firmware::GetInstance().m_psHUART, "0x%02x ", m_punRxBuffer[unIdx]);        
-         }
-         fprintf(Firmware::GetInstance().m_psHUART, "]\r\n");
-         /////////////////
       }
     
       if(m_unRxBufferPointer < m_unUsedBufferLength) {
          unRxByte = m_punRxBuffer[m_unRxBufferPointer];
          m_punRxBuffer[m_unRxBufferPointer++] = unRxByte;
-         fprintf(Firmware::GetInstance().m_psHUART,"unRxByte(R) = 0x%02x\r\n", unRxByte);
       }     
       else if(m_cController.Available()) {
          unRxByte = m_cController.Read();
          m_punRxBuffer[m_unRxBufferPointer++] = unRxByte;
          m_unUsedBufferLength++;
-         fprintf(Firmware::GetInstance().m_psHUART,"unRxByte(I) = 0x%02x\r\n", unRxByte);
       }
       else {
          break;
       }
-
-      fprintf(Firmware::GetInstance().m_psHUART, "[State: %s]\r\n", StateToString(m_eState));
-      
-      fprintf(Firmware::GetInstance().m_psHUART, 
-              "m_unUsedBufferLength = %u\r\n"
-              "m_unReparseOffset = %u\r\n"
-              "m_unRxBufferPointer = %u\r\n",
-              m_unUsedBufferLength, m_unReparseOffset, m_unRxBufferPointer);
-
-
-      //////////////
-      fprintf(Firmware::GetInstance().m_psHUART, "Buf = [ ");
-      for(uint8_t unIdx = 0; unIdx < RX_COMMAND_BUFFER_LENGTH; unIdx++) {
-         fprintf(Firmware::GetInstance().m_psHUART, "0x%02x ", m_punRxBuffer[unIdx]);        
-      }
-      fprintf(Firmware::GetInstance().m_psHUART, "]\r\n");
-      /////////////////
    
       switch(m_eState) {
       case EState::SRCH_PREAMBLE1:
          if(unRxByte != PREAMBLE1) {
-            bBufOverflow = true;
+            bBufAdjustReq = true;
          }
          else {
             m_eState = EState::SRCH_PREAMBLE2;
@@ -152,11 +111,7 @@ void CPacketControlInterface::ProcessInput() {
          break;
       case EState::SRCH_PREAMBLE2:
          if(unRxByte != PREAMBLE2) {
-            bBufOverflow = true;
-            /*
-            m_unRxBufferPointer = 0;
-            m_eState = EState::SRCH_PREAMBLE1;
-            */
+            bBufAdjustReq = true;
          }
          else {
             m_eState = EState::SRCH_POSTAMBLE1;
@@ -211,7 +166,8 @@ void CPacketControlInterface::ProcessInput() {
       default:
          break;
       }
-      bBufOverflow = bBufOverflow || (m_unRxBufferPointer == RX_COMMAND_BUFFER_LENGTH);
+      /* buffer overflow condition */
+      bBufAdjustReq = bBufAdjustReq || (m_unRxBufferPointer == RX_COMMAND_BUFFER_LENGTH);
    }
 }
 
