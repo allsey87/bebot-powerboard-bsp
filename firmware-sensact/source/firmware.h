@@ -1,8 +1,6 @@
 #ifndef FIRMWARE_H
 #define FIRMWARE_H
 
-//#define DEBUG
-
 /* AVR Headers */
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -15,6 +13,7 @@
 /* Firmware Headers */
 #include <huart_controller.h>
 #include <tw_controller.h>
+#include <packet_control_interface.h>
 #include <timer.h>
 
 #include <differential_drive_system.h>
@@ -31,12 +30,7 @@ public:
       m_psHUART = ps_huart;
    }
 
-   /*
    CHUARTController& GetHUARTController() {
-      return m_cHUARTController;
-   }
-   */
-   HardwareSerial& GetHUARTController() {
       return m_cHUARTController;
    }
 
@@ -48,102 +42,74 @@ public:
       return m_cTimer;
    }
 
-   int Exec() {
-      enum class EMotor { LEFT, RIGHT } eSelectedMotor = EMotor::RIGHT;
-      CDifferentialDriveSystem::SVelocity sVelocity;
-      CAccelerometerSystem::SReading sReading;
-      int16_t nLeftSpeed = 0, nRightSpeed = 0;
-      uint8_t unInput = 0;
+   void Exec() {
+      uint8_t punTxData[8];
 
       m_cAccelerometerSystem.Init();
 
       for(;;) {
-         if(Firmware::GetInstance().GetHUARTController().Available()) {
-            unInput = Firmware::GetInstance().GetHUARTController().Read();
-            /* flush */
-            while(Firmware::GetInstance().GetHUARTController().Available()) {
-               Firmware::GetInstance().GetHUARTController().Read();
+         m_cPacketControlInterface.ProcessInput();
+
+         if(m_cPacketControlInterface.GetState() == CPacketControlInterface::EState::RECV_COMMAND) {
+            CPacketControlInterface::CPacket cPacket = m_cPacketControlInterface.GetPacket();
+            switch(cPacket.GetType()) {
+            case CPacketControlInterface::CPacket::EType::SET_DDS_ENABLE: 
+               fprintf(Firmware::GetInstance().m_psHUART, "SET_DDS_ENABLE: ");
+               /* Set the enable signal for the differential drive system */
+               if(cPacket.HasData() && cPacket.GetDataLength() == 1) {
+                  const uint8_t* punRxData = cPacket.GetDataPointer();
+                  fprintf(Firmware::GetInstance().m_psHUART, "%c\r\n", (punRxData[0] == 0)?'0':'1');
+                  if(punRxData[0] == 0) {
+                     m_cDifferentialDriveSystem.Disable();
+                  }
+                  else {
+                     m_cDifferentialDriveSystem.Enable();
+                  }
+               }
+               break;
+            case CPacketControlInterface::CPacket::EType::SET_DDS_SPEED:
+               fprintf(Firmware::GetInstance().m_psHUART, "SET_DDS_SPEED: ");
+               /* Set the speed of the differential drive system */
+               if(cPacket.HasData() && cPacket.GetDataLength() == 2) {
+                  const uint8_t* punRxData = cPacket.GetDataPointer();
+                  int8_t nLeftVelocity = reinterpret_cast<const int8_t&>(punRxData[0]);
+                  int8_t nRightVelocity = reinterpret_cast<const int8_t&>(punRxData[1]);
+                  fprintf(Firmware::GetInstance().m_psHUART, "%d %d\r\n", nLeftVelocity, nRightVelocity);
+                  m_cDifferentialDriveSystem.SetTargetVelocity(nLeftVelocity, nRightVelocity);
+                  //m_cPacketCommandInterface.SendAck(cRxCommand, true);
+               }
+               break;
+            case CPacketControlInterface::CPacket::EType::GET_DDS_SPEED:
+               /* Get the speed of the differential drive system */
+               reinterpret_cast<int8_t&>(punTxData[0]) = m_cDifferentialDriveSystem.GetLeftVelocity();
+               reinterpret_cast<int8_t&>(punTxData[1]) = m_cDifferentialDriveSystem.GetRightVelocity();
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_DDS_SPEED,
+                                                    punTxData,
+                                                    2);
+               break;
+               /*
+            case CPacketControlInterface::CPacket::EType::GET_ACCEL_READING:
+               {
+                  CAccelerometerSystem::SReading sReading = m_cAccelerometerSystem.GetReading();
+                  reinterpret_cast<void&>(punTxData[0]) = sReading.X;
+                  reinterpret_cast<int8_t&>(punTxData[2]) = sReading.Y;
+                  reinterpret_cast<int16_t&>(punTxData[4]) = sReading.Z;
+                  reinterpret_cast<int16_t&>(punTxData[6]) = sReading.Temp;
+                  m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_ACCEL_READING,
+                                                       punTxData,
+                                                       8);
+               }
+               break;
+               */
+            default:
+               /* unknown command */
+               break;       
             }
-         }
-         else {
-            unInput = 0;
-         }
-         switch(unInput) {
-         case 'a':
-            sReading = m_cAccelerometerSystem.GetReading();
-            fprintf(m_psHUART, 
-                    "Acc[x] = %i\r\n"
-                    "Acc[y] = %i\r\n"
-                    "Acc[z] = %i\r\n"
-                    "Temp = %i\r\n",
-                    sReading.X, sReading.Y, sReading.Z, sReading.Temp);
-            break;
-         case 'u':
-            fprintf(m_psHUART, "Uptime: %lums\r\n", m_cTimer.GetMilliseconds());
-            break;
-         case 'l':
-            fprintf(m_psHUART, "Selected Left\r\n");
-            eSelectedMotor = EMotor::LEFT;
-            break;
-         case 'r':
-            fprintf(m_psHUART, "Selected Right\r\n");
-            eSelectedMotor = EMotor::RIGHT;
-            break;          
-         case 'e':
-            fprintf(m_psHUART, "DDS Enabled\r\n");
-            m_cDifferentialDriveSystem.Enable();
-            break;
-         case '0':
-            fprintf(m_psHUART, "DDS Disabled\r\n");
-            m_cDifferentialDriveSystem.Disable();
-            break;
-         case '1' ... '9':
-            if(eSelectedMotor == EMotor::RIGHT) {
-               nRightSpeed = (unInput - '5') * 25;
-            }
-            else {
-               nLeftSpeed = (unInput - '5') * 25;
-            }
-            fprintf(m_psHUART, "Target: L:%d\tR:%d\r\n", nLeftSpeed, nRightSpeed);
-            m_cDifferentialDriveSystem.SetTargetVelocity(nLeftSpeed, nRightSpeed);
-            break;
-         case 's':
-            sVelocity = m_cDifferentialDriveSystem.GetVelocity();
-            fprintf(m_psHUART, 
-                    "L:%d\tR:%d\r\n", 
-                    sVelocity.Left, 
-                    sVelocity.Right);
-            break;
-         case 't':
-            fprintf(m_psHUART, "-- DDS Test Start --\r\n");
-            TestDriveSystem();
-            fprintf(m_psHUART, "-- DDS Test End --\r\n");
-            break;
-         default:
-            break;
+            //m_cPacketControlInterface.Reset();
          }
       }
-      return 0;
    }
 
-   void TestDriveSystem() {
-      int16_t pnTestVelocities[] = {0, 40, 120, -80, 0};
-      m_cDifferentialDriveSystem.Enable();
-      for(int16_t nTargetVelocity : pnTestVelocities) {
-         m_cDifferentialDriveSystem.SetTargetVelocity(nTargetVelocity, nTargetVelocity);
-         for(uint16_t cnt = 0; cnt < 400; cnt++) {
-            CDifferentialDriveSystem::SVelocity sVelocity = 
-               m_cDifferentialDriveSystem.GetVelocity();
-            fprintf(m_psHUART, 
-                    "%4d\t%4d\t%4d\r\n", 
-                    nTargetVelocity, 
-                    sVelocity.Left, 
-                    sVelocity.Right);
-         }
-      }
-      m_cDifferentialDriveSystem.Disable();
-   }
-      
 private:
 
    /* private constructor */
@@ -157,8 +123,9 @@ private:
                TIFR2,
                TCNT2,
                TIMER2_OVF_vect_num),
-      m_cHUARTController(HardwareSerial::instance()),
-      m_cTWController(CTWController::GetInstance()) {     
+      m_cHUARTController(CHUARTController::instance()),
+      m_cTWController(CTWController::GetInstance()),
+      m_cPacketControlInterface(m_cHUARTController) {     
 
       /* Enable interrupts */
       sei();
@@ -167,12 +134,13 @@ private:
    CTimer m_cTimer;
 
    /* ATMega328P Controllers */
-   /* TODO remove singleton and reference from HUART */
-   //CHUARTController& m_cHUARTController;
-   HardwareSerial& m_cHUARTController;
+   CHUARTController& m_cHUARTController;
  
    CTWController& m_cTWController;
 
+   CPacketControlInterface m_cPacketControlInterface;
+
+   /* Core system functional units */
    CDifferentialDriveSystem m_cDifferentialDriveSystem;
 
    CAccelerometerSystem m_cAccelerometerSystem;

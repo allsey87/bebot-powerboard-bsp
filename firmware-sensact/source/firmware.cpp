@@ -23,7 +23,10 @@ int main(void)
    Firmware::GetInstance().SetFilePointer(&huart);
 
    /* Execute the firmware */
-   return Firmware::GetInstance().Exec();
+   Firmware::GetInstance().Exec();
+
+   /* Shutdown */
+   return 0;
 }
 
 /***********************************************************/
