@@ -4,6 +4,7 @@
 #include <huart_controller.h>
 
 #define RX_COMMAND_BUFFER_LENGTH 16
+#define TX_COMMAND_BUFFER_LENGTH 16
 
 #define PREAMBLE1  0xF0
 #define PREAMBLE2  0xCA
@@ -40,10 +41,44 @@ public:
    public:
       
       enum class EType : uint8_t {
+         /*************************************/
+         /* Sensor-Actuator Microcontroller   */
+         /*************************************/
+         /* Differential Drive System Packets */
          SET_DDS_ENABLE = 0x10,
          SET_DDS_SPEED  = 0x11,
          GET_DDS_SPEED  = 0x12,
+         /* Accelerometer System Packets */
+         GET_ACCEL_READING = 0x20,
 
+         /*************************************/
+         /* Power Management Microcontroller  */
+         /*************************************/
+         /* Switches */
+         SET_SYSTEM_POWER_ENABLE = 0x40,
+         SET_ACTUATOR_POWER_ENABLE = 0x41,
+
+         /*************************************/
+         /* Manipulator Microcontroller       */
+         /*************************************/
+         GET_CHARGER_STATUS = 0x60,
+         /* Stepper Motor Controller */
+         SET_STEPPER_MOTOR_ENABLE = 0x70,
+         SET_STEPPER_MOTOR_SPEED = 0x71,
+         GET_LIMIT_SWITCH_STATE = 0x72,
+         /* Electromagnet Subsystem */
+         SET_EM_CHARGE_ENABLE = 0x80,
+         SET_EM_DISCHARGE_MODE = 0x81,
+         GET_EM_ACCUM_VOLTAGE = 0x82,
+         /* Range Finders */
+         READ_RF_RANGE = 0x90,
+         READ_RF_AMBIENT = 0x91,
+         /* NFC Control */
+         WRITE_NFC_MESSAGE = 0xA0,
+         
+         /*************************************/
+         /* Invalid value for conversions     */
+         /*************************************/
          INVALID = 0xFF
       };
       
@@ -85,18 +120,14 @@ public:
   
    void ProcessInput();
 
-   const char* StateToString(EState e_state);
-
    void Reset();
+
+   void SendPacket(CPacket::EType e_type,
+                   uint8_t* pun_tx_data = NULL,
+                   uint8_t un_tx_data_length = 0);
       
 private:
-   uint8_t ComputeChecksum();
-
-   void SendAck(const CPacket& c_packet,
-                bool b_interpreted = true,
-                uint8_t* pun_tx_data = NULL,
-                uint8_t un_tx_data_length = 0) const;
-
+   uint8_t ComputeChecksum(uint8_t* pun_buf_data, uint8_t un_buf_length);
 
    EState m_eState;
 

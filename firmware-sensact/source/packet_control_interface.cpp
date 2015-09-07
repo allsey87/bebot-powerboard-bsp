@@ -37,12 +37,30 @@ CPacketControlInterface::EState CPacketControlInterface::GetState() const {
 }
 
 
-void CPacketControlInterface::SendAck(const CPacket& c_packet,
-                                      bool b_interpreted,
-                                      uint8_t* pun_tx_data,
-                                      uint8_t un_tx_data_length) const {
+void CPacketControlInterface::SendPacket(CPacket::EType e_type,
+                                         uint8_t* pun_tx_data,
+                                         uint8_t un_tx_data_length) {
 
-   
+   uint8_t punTxBuffer[TX_COMMAND_BUFFER_LENGTH];
+   uint8_t unTxBufferPointer = 0;
+   /* Check if the data will fit into the buffer */
+   if(un_tx_data_length + NON_DATA_SIZE > TX_COMMAND_BUFFER_LENGTH)
+      return;
+
+   punTxBuffer[unTxBufferPointer++] = PREAMBLE1;
+   punTxBuffer[unTxBufferPointer++] = PREAMBLE2;
+   punTxBuffer[unTxBufferPointer++] = static_cast<uint8_t>(e_type);
+   punTxBuffer[unTxBufferPointer++] = un_tx_data_length;
+   while(unTxBufferPointer < DATA_START_OFFSET + un_tx_data_length) {
+      punTxBuffer[unTxBufferPointer] = pun_tx_data[unTxBufferPointer - DATA_START_OFFSET];
+      unTxBufferPointer++;
+   }
+   punTxBuffer[unTxBufferPointer++] = ComputeChecksum(punTxBuffer, TX_COMMAND_BUFFER_LENGTH);
+   punTxBuffer[unTxBufferPointer++] = POSTAMBLE1;
+   punTxBuffer[unTxBufferPointer++] = POSTAMBLE2;
+
+   for(uint8_t unIdx = 0; unIdx < unTxBufferPointer; unIdx++)
+      m_cController.Write(punTxBuffer[unIdx]);
 }
 
 void CPacketControlInterface::Reset() {
@@ -80,7 +98,7 @@ void CPacketControlInterface::ProcessInput() {
 
          m_unUsedBufferLength -= m_unReparseOffset;
 
-         /* The overflow has been handled */
+         /* The buffer has been adjusted handled */
          bBufAdjustReq = false;
          /* Reparse the buffer */
          m_unRxBufferPointer = 0;
@@ -99,7 +117,7 @@ void CPacketControlInterface::ProcessInput() {
       else {
          break;
       }
-   
+
       switch(m_eState) {
       case EState::SRCH_PREAMBLE1:
          if(unRxByte != PREAMBLE1) {
@@ -138,19 +156,11 @@ void CPacketControlInterface::ProcessInput() {
             }
          }
          else {
-            /* unRxByte == POSTAMBLE2 */
-            fprintf(Firmware::GetInstance().m_psHUART, 
-                    "CS: 0x%02x =? 0x%02x, DL: %u =? %u\r\n",
-                    ComputeChecksum(),
-                    m_punRxBuffer[m_unRxBufferPointer + CHECKSUM_OFFSET],
-                    m_unRxBufferPointer >= NON_DATA_SIZE ? 
-                    m_unRxBufferPointer - NON_DATA_SIZE : 0xFF,
-                    m_punRxBuffer[DATA_LENGTH_OFFSET]);
-
             /* check if the length field and checksum are valid */
             if(m_unRxBufferPointer >= NON_DATA_SIZE &&
                m_punRxBuffer[DATA_LENGTH_OFFSET] == (m_unRxBufferPointer - NON_DATA_SIZE) &&
-               ComputeChecksum() == m_punRxBuffer[m_unRxBufferPointer + CHECKSUM_OFFSET]) {
+               ComputeChecksum(m_punRxBuffer, RX_COMMAND_BUFFER_LENGTH) == 
+               m_punRxBuffer[m_unRxBufferPointer + CHECKSUM_OFFSET]) {
                /* At this point we assume we have a valid command */
                m_eState = EState::RECV_COMMAND;
                /* Populate the packet fields */
@@ -166,12 +176,13 @@ void CPacketControlInterface::ProcessInput() {
       default:
          break;
       }
+
       /* buffer overflow condition */
       bBufAdjustReq = bBufAdjustReq || (m_unRxBufferPointer == RX_COMMAND_BUFFER_LENGTH);
    }
 }
 
-const char* CPacketControlInterface::StateToString(CPacketControlInterface::EState e_state) {
+const char* CPacketControlInterface::StateToString(CPacketControlInterface::EState e_state) const {
    switch(e_state) {
    case EState::SRCH_PREAMBLE1:
       return "SRCH_PREAMBLE1";
@@ -199,12 +210,13 @@ const CPacketControlInterface::CPacket& CPacketControlInterface::GetPacket() con
 }
 
 
-uint8_t CPacketControlInterface::ComputeChecksum() {
+uint8_t CPacketControlInterface::ComputeChecksum(uint8_t* pun_buf_data, uint8_t un_buf_length) {
    uint8_t unChecksum = 0;
    for(uint8_t unIdx = TYPE_OFFSET;
-       unIdx < DATA_START_OFFSET + m_punRxBuffer[DATA_LENGTH_OFFSET];
+       unIdx < ((DATA_START_OFFSET + pun_buf_data[DATA_LENGTH_OFFSET] > un_buf_length) ?
+          un_buf_length : (DATA_START_OFFSET + pun_buf_data[DATA_LENGTH_OFFSET]));
        unIdx++) {
-      unChecksum += m_punRxBuffer[unIdx];
+      unChecksum += pun_buf_data[unIdx];
    }
    return unChecksum;
 }
