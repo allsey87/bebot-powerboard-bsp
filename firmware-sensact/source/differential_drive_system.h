@@ -10,16 +10,12 @@ class CDifferentialDriveSystem {
 public:
    CDifferentialDriveSystem();
 
-   void SetTargetVelocity(int16_t n_left_speed, int16_t n_right_speed) {
+   void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed) {
       m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_speed, n_right_speed);
    }
 
-   struct SVelocity {
-      int16_t Left;
-      int16_t Right;
-   };
-
-   SVelocity GetVelocity();
+   int8_t GetLeftVelocity();
+   int8_t GetRightVelocity();
 
    void Enable();
    void Disable();
@@ -55,7 +51,7 @@ private:
    public:
       CPIDControlStepInterrupt(CDifferentialDriveSystem* pc_differential_drive_system, 
                                uint8_t un_intr_vect_num);
-      void SetTargetVelocity(int16_t n_left_speed, int16_t n_right_speed) {
+      void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed) {
          nLeftTarget = n_left_speed;
          nRightTarget = n_right_speed;
       }
@@ -63,10 +59,10 @@ private:
       CDifferentialDriveSystem* m_pcDifferentialDriveSystem;     
       void ServiceRoutine();
    public:
-      int16_t nLeftTarget;
+      int8_t nLeftTarget;
       int16_t nLeftLastError;
       int16_t nLeftErrorIntegral;
-      int16_t nRightTarget;
+      int8_t nRightTarget;
       int16_t nRightLastError;
       int16_t nRightErrorIntegral;
 

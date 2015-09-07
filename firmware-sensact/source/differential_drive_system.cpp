@@ -69,19 +69,31 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
 /****************************************/
 /****************************************/
 
-CDifferentialDriveSystem::SVelocity CDifferentialDriveSystem::GetVelocity() {
-   SVelocity sVelocity;
+int8_t CDifferentialDriveSystem::GetLeftVelocity() {
+   int16_t nVelocity;
    uint8_t unSREG = SREG;
    cli();
-   sVelocity.Left = nLeftStepsOut;
-   sVelocity.Right = nRightStepsOut;
+   nVelocity = nLeftStepsOut;
    SREG = unSREG;
-   return sVelocity;
+   /* saturate and return the velocity tn the int8_t range */
+   return (nVelocity > INT8_MAX ? INT8_MAX : (nVelocity < INT8_MIN ? INT8_MIN : nVelocity));
 }
 
 /****************************************/
 /****************************************/
 
+int8_t CDifferentialDriveSystem::GetRightVelocity() {
+   int16_t nVelocity;
+   uint8_t unSREG = SREG;
+   cli();
+   nVelocity = nRightStepsOut;
+   SREG = unSREG;
+   /* saturate and return the velocity tn the int8_t range */
+   return (nVelocity > INT8_MAX ? INT8_MAX : (nVelocity < INT8_MIN ? INT8_MIN : nVelocity));
+}
+
+/****************************************/
+/****************************************/
 
 void CDifferentialDriveSystem::Enable() {
    /* Enable the motor driver */
@@ -250,7 +262,7 @@ void CDifferentialDriveSystem::CShaftEncodersInterrupt::ServiceRoutine() {
 
 void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    /* Calculate left PID intermediates */
-   int16_t nLeftError = nLeftTarget - m_pcDifferentialDriveSystem->nLeftSteps;
+   int16_t nLeftError = int16_t(nLeftTarget) - m_pcDifferentialDriveSystem->nLeftSteps;
    nLeftErrorIntegral += nLeftError;
    int16_t nLeftErrorDerivative = (nLeftError - nLeftLastError);
    nLeftLastError = nLeftError;
@@ -263,7 +275,7 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    nLeftOutput = nLeftOutput > 0xFF ? 0xFF :
       nLeftOutput < -0xFF ? -0xFF : nLeftOutput;
    /* Calculate right PID intermediates */   
-   int16_t nRightError = nRightTarget - m_pcDifferentialDriveSystem->nRightSteps;
+   int16_t nRightError = int16_t(nRightTarget) - m_pcDifferentialDriveSystem->nRightSteps;
    nRightErrorIntegral += nRightError;
    int16_t nRightErrorDerivative = (nRightError - nRightLastError);
    nRightLastError = nRightError;
