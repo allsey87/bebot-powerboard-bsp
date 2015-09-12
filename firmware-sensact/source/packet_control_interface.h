@@ -62,19 +62,18 @@ public:
          /* Manipulator Microcontroller       */
          /*************************************/
          GET_CHARGER_STATUS = 0x60,
-         /* Stepper Motor Controller */
-         SET_STEPPER_MOTOR_ENABLE = 0x70,
-         SET_STEPPER_MOTOR_SPEED = 0x71,
+         /* Lift Actuator System */
+         SET_LIFT_ACTUATOR_SPEED = 0x71,
          GET_LIMIT_SWITCH_STATE = 0x72,
          /* Electromagnet Subsystem */
          SET_EM_CHARGE_ENABLE = 0x80,
          SET_EM_DISCHARGE_MODE = 0x81,
          GET_EM_ACCUM_VOLTAGE = 0x82,
          /* Range Finders */
-         READ_RF_RANGE = 0x90,
-         READ_RF_AMBIENT = 0x91,
+         GET_RF_RANGE = 0x90,
+         GET_RF_AMBIENT = 0x91,
          /* NFC Control */
-         WRITE_NFC_MESSAGE = 0xA0,
+         SEND_NFC_MESSAGE = 0xA0,
          
          /*************************************/
          /* Invalid value for conversions     */
