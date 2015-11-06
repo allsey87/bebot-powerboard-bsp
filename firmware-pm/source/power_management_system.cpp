@@ -15,7 +15,7 @@
 
 /* TW addresses of configurable devices */
 #define INPUT_STATUS_LEDS_ADDR 0x60
-#define BATT_STATUS_LEDS_ADDR 0x61     
+#define BATT_STATUS_LEDS_ADDR 0x61
 
 /* Definitions for status LEDs */
 #define ADP_LED_INDEX 0
@@ -43,7 +43,7 @@
 
 #define ACT_BATT_REG_VOLTAGE 4200
 #define ACT_BATT_INIT_CHG_VOLTAGE 4000
-#define ACT_BATT_CHG_CURRENT 370
+#define ACT_BATT_CHG_CURRENT 740
 #define ACT_BATT_TRM_CURRENT 50
 #define ACT_BATT_LOW_VOLTAGE 3200
 #define ACT_BATT_NOTPRESENT_VOLTAGE 100
@@ -61,17 +61,17 @@ CPowerManagementSystem::CPowerManagementSystem() :
 
 void CPowerManagementSystem::Init() {
    /* Init base power configuration */
-   SetSystemToActuatorPassthroughPowerOn(false);
+   SetSystemToActuatorPassthroughPowerOn(true);
    SetActuatorPowerOn(false);
    SetSystemPowerOn(true);
 
    /* Init output control pins - this overrides hardware pull ups / downs */
-   DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN); //| PIN_PASSTHROUGH_EN);
-   
+   DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN | PIN_PASSTHROUGH_EN);
+
    m_cActuatorPowerManager.SetInputLimit(CBQ24250Module::EInputLimit::LHIZ);
 
    m_cSystemPowerManager.SetChargingEnable(false);
-   m_cActuatorPowerManager.SetChargingEnable(true);
+   m_cActuatorPowerManager.SetChargingEnable(false);
 
    m_cSystemPowerManager.SetBatteryRegulationVoltage(SYS_BATT_REG_VOLTAGE);
    m_cSystemPowerManager.SetBatteryChargingCurrent(SYS_BATT_CHG_CURRENT);
@@ -89,13 +89,13 @@ void CPowerManagementSystem::Init() {
 
 void CPowerManagementSystem::SetSystemPowerOn(bool b_set_power_on) {
    if(b_set_power_on) {
-      fprintf(CFirmware::GetInstance().m_psHUART, 
+      fprintf(CFirmware::GetInstance().m_psHUART,
               "SYS(%s->ON)\r\n",
               IsSystemPowerOn()?"ON":"OFF");
       PORTD |= PIN_SYSTEM_EN;
    }
    else {
-      fprintf(CFirmware::GetInstance().m_psHUART, 
+      fprintf(CFirmware::GetInstance().m_psHUART,
               "SYS(%s->OFF)\r\n",
               IsSystemPowerOn()?"ON":"OFF");
       PORTD &= ~PIN_SYSTEM_EN;
@@ -107,13 +107,13 @@ void CPowerManagementSystem::SetSystemPowerOn(bool b_set_power_on) {
 
 void CPowerManagementSystem::SetActuatorPowerOn(bool b_set_power_on) {
    if(b_set_power_on) {
-      fprintf(CFirmware::GetInstance().m_psHUART, 
+      fprintf(CFirmware::GetInstance().m_psHUART,
               "ACT(%s->ON)\r\n",
               IsActuatorPowerOn()?"ON":"OFF");
       PORTD |= PIN_ACTUATORS_EN;
    }
    else {
-      fprintf(CFirmware::GetInstance().m_psHUART, 
+      fprintf(CFirmware::GetInstance().m_psHUART,
               "ACT(%s->OFF)\r\n",
               IsActuatorPowerOn()?"ON":"OFF");
       PORTD &= ~PIN_ACTUATORS_EN;
@@ -123,14 +123,19 @@ void CPowerManagementSystem::SetActuatorPowerOn(bool b_set_power_on) {
 /***********************************************************/
 /***********************************************************/
 
-/* Disabled */
 void CPowerManagementSystem::SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on) {
-   /*
-   if(b_set_power_on)
+   if(b_set_power_on) {
+      fprintf(CFirmware::GetInstance().m_psHUART,
+              "SYS_TO_ACT(%s->ON)\r\n",
+              IsSystemToActuatorPassthroughPowerOn()?"ON":"OFF");
       PORTD |= PIN_PASSTHROUGH_EN;
-   else
+   }
+   else {
+      fprintf(CFirmware::GetInstance().m_psHUART,
+              "SYS_TO_ACT(%s->OFF)\r\n",
+              IsSystemToActuatorPassthroughPowerOn()?"ON":"OFF");
       PORTD &= ~PIN_PASSTHROUGH_EN;
-   */
+   }
 }
 
 /***********************************************************/
@@ -145,6 +150,13 @@ bool CPowerManagementSystem::IsSystemPowerOn() {
 
 bool CPowerManagementSystem::IsActuatorPowerOn() {
    return ((PORTD & PIN_ACTUATORS_EN) != 0);
+}
+
+/***********************************************************/
+/***********************************************************/
+
+bool CPowerManagementSystem::IsSystemToActuatorPassthroughPowerOn() {
+   return ((PORTD & PIN_PASSTHROUGH_EN) != 0);
 }
 
 /***********************************************************/
@@ -274,9 +286,9 @@ void CPowerManagementSystem::Update() {
    }
 
    /* Read battery voltages */
-   m_unSystemBatteryVoltage = 
+   m_unSystemBatteryVoltage =
       m_cADCController.GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF;
-   m_unActuatorBatteryVoltage = 
+   m_unActuatorBatteryVoltage =
       m_cADCController.GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF;
 
    /* Allocate power to the system if switched on */
@@ -289,7 +301,7 @@ void CPowerManagementSystem::Update() {
       }
    }
 
-   /* Enable charging the system battery if at least a third of the charging current 
+   /* Enable charging the system battery if at least a third of the charging current
       is available. BQ24161 automatically prioritizes system power. */
    if(m_cSystemPowerManager.GetBatteryState() != CBQ24161Module::EBatteryState::NORMAL ||
       m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_FAULT ||
@@ -313,7 +325,7 @@ void CPowerManagementSystem::Update() {
          /* Battery is charged or being charged */
          if(m_cSystemPowerManager.GetDeviceState() == CBQ24161Module::EDeviceState::CHARGING) {
             /* Continue charging while available current is above a third the charging current */
-            if(unAvailableCurrent > (SYS_BATT_CHG_CURRENT / 3)) {             
+            if(unAvailableCurrent > (SYS_BATT_CHG_CURRENT / 3)) {
                unAvailableCurrent -= (SYS_BATT_CHG_CURRENT / 3);
                m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
                m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
@@ -349,11 +361,11 @@ void CPowerManagementSystem::Update() {
             else {
                m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
             }
-         } 
+         }
       }
    }
 
-   /* Deduct a passthrough loss from the available current to compensate for regulation losses 
+   /* Deduct a passthrough loss from the available current to compensate for regulation losses
       and ensure system stability */
    if(unAvailableCurrent > SYS_ACT_PASSTHROUGH_LOSS) {
       unAvailableCurrent -= SYS_ACT_PASSTHROUGH_LOSS;
@@ -365,36 +377,28 @@ void CPowerManagementSystem::Update() {
    /* eInputLimit defines the remaining power that we could forward to the actuator system */
    CBQ24250Module::EInputLimit eActuatorInputLimit;
    /* Select eInputLimit, depending on the remaining current */
-   if(unAvailableCurrent > 2000) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L2000;
-   } 
-   else if(unAvailableCurrent > 1500) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L1500;
-   } 
-   else if(unAvailableCurrent > 900) {
+   if(unAvailableCurrent > 900) {
       eActuatorInputLimit = CBQ24250Module::EInputLimit::L900;
-   } 
+   }
    else if(unAvailableCurrent > 500) {
       eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
-   } 
+   }
+   else if(unAvailableCurrent > 150) {
+      eActuatorInputLimit = CBQ24250Module::EInputLimit::L150;
+   }
    else if(unAvailableCurrent > 100) {
       eActuatorInputLimit = CBQ24250Module::EInputLimit::L100;
-   } 
+   }
    else {
-      /* If the remaining current on the system line is less than 100mA there is no point 
-         forwarding it to the actuator system */
+      /* If the remaining current on the system line is less than 100mA there is no point
+         forwarding it to the actuator system. Note, when in HIZ the BQ24250 still operates */
       eActuatorInputLimit = CBQ24250Module::EInputLimit::LHIZ;
       unAvailableCurrent = 0;
    }
    /* Set the input limit */
+   eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
    m_cActuatorPowerManager.SetInputLimit(eActuatorInputLimit);
-   /* Given available current, pass it through to the actuator system */
-   if(unAvailableCurrent > 0) {
-      SetSystemToActuatorPassthroughPowerOn(true);
-   } else {
-      SetSystemToActuatorPassthroughPowerOn(false);
-   }
-      
+
    /* Allocate power to the actuators if switched on */
    if(IsActuatorPowerOn()) {
       if(unAvailableCurrent > ACT_POWER_REQ) {
@@ -405,13 +409,13 @@ void CPowerManagementSystem::Update() {
       }
    }
 
-   /* Enable charging the actuator battery if at least a third of the charging current 
+   /* Enable charging the actuator battery if at least a third of the charging current
       is available. BQ24250 automatically prioritizes actuator power. */
    switch(m_cActuatorPowerManager.GetDeviceState()) {
    case CBQ24250Module::EDeviceState::FAULT:
       /* Fault condition - terminate charging */
       m_cActuatorPowerManager.SetChargingEnable(false);
-      if(m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_OVER_VOLTAGE || 
+      if(m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_OVER_VOLTAGE ||
          m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_DISCONNECTED) {
          /* Battery fault */
          m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
@@ -420,7 +424,7 @@ void CPowerManagementSystem::Update() {
       else if(m_cActuatorPowerManager.GetFault() == CBQ24250Module::EFault::BATT_THERMAL_SHDN) {
          /* Terminate charging */
          m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
-         /* Handle special case, since disconnected battery removes thermistor network 
+         /* Handle special case, since disconnected battery removes thermistor network
             generating a BATT_THERMAL_SHDN fault */
          if(m_unActuatorBatteryVoltage < ACT_BATT_NOTPRESENT_VOLTAGE) {
             m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::OFF);
@@ -447,7 +451,7 @@ void CPowerManagementSystem::Update() {
          /* Indicate battery is present */
          m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
          if(m_unActuatorBatteryVoltage < ACT_BATT_INIT_CHG_VOLTAGE &&
-            unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {             
+            unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {
             unAvailableCurrent -= (ACT_BATT_CHG_CURRENT / 3);
             m_cActuatorPowerManager.SetChargingEnable(true);
             m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
@@ -465,9 +469,9 @@ void CPowerManagementSystem::Update() {
       break;
    case CBQ24250Module::EDeviceState::CHARGING:
       m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
-      if(unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {             
+      if(unAvailableCurrent > (ACT_BATT_CHG_CURRENT / 3)) {
          unAvailableCurrent -= (ACT_BATT_CHG_CURRENT / 3);
-         /* since we are in the charging state, there should be no need to execute 
+         /* since we are in the charging state, there should be no need to execute
             m_cActuatorPowerManager.SetChargingEnable(true) here */
          m_cBatteryStatusLEDs.SetLEDMode(BATT2_CHRG_INDEX, CPCA9633Module::ELEDMode::BLINK);
       }
@@ -488,7 +492,7 @@ void CPowerManagementSystem::Update() {
 /***********************************************************/
 
 bool CPowerManagementSystem::IsUSBConnected() {
-   return m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::USB) == 
+   return m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::USB) ==
       CBQ24161Module::EInputState::NORMAL;
 }
 
@@ -559,7 +563,7 @@ void CPowerManagementSystem::PrintStatus() {
    case CBQ24161Module::EFault::BATT_FAULT:
       fprintf(CFirmware::GetInstance().m_psHUART, "BATT");
       break;
-   }           
+   }
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, "selected source: ");
    switch(m_cSystemPowerManager.GetSelectedSource()) {
@@ -747,11 +751,11 @@ void CPowerManagementSystem::PrintStatus() {
       break;
    }
    fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
-   fprintf(CFirmware::GetInstance().m_psHUART, 
-           "wd_en: %c\r\n", 
+   fprintf(CFirmware::GetInstance().m_psHUART,
+           "wd_en: %c\r\n",
            m_cActuatorPowerManager.GetWatchdogEnabled()?'t':'f');
-   fprintf(CFirmware::GetInstance().m_psHUART, 
-           "wd_fault: %c\r\n", 
+   fprintf(CFirmware::GetInstance().m_psHUART,
+           "wd_fault: %c\r\n",
            m_cActuatorPowerManager.GetWatchdogFault()?'t':'f');
 }
 

@@ -26,9 +26,12 @@ public:
 
    bool IsActuatorPowerOn();
 
+   bool IsSystemToActuatorPassthroughPowerOn();
+
    void Update();
 
    void PrintStatus();
+
 
 private:
    CADCController m_cADCController;
