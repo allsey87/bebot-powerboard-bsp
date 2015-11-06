@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <interrupt.h>
 
-#define MOVING_AVERAGE_LENGTH 1
-
 class CDifferentialDriveSystem {
 public:
    CDifferentialDriveSystem();
@@ -20,8 +18,6 @@ public:
    void Enable();
    void Disable();
 
-   /* To be made private */
-  
 private:
    enum class EBridgeMode {
       COAST,
@@ -39,10 +35,10 @@ private:
 
    class CShaftEncodersInterrupt : public CInterrupt {
    public:
-      CShaftEncodersInterrupt(CDifferentialDriveSystem* pc_differential_drive_system, 
+      CShaftEncodersInterrupt(CDifferentialDriveSystem* pc_differential_drive_system,
                               uint8_t un_intr_vect_num);
-   private:  
-      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;     
+   private:
+      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;
       void ServiceRoutine();
       volatile uint8_t unPortLast;
    } m_cShaftEncodersInterrupt;
@@ -55,8 +51,8 @@ private:
          nLeftTarget = n_left_speed;
          nRightTarget = n_right_speed;
       }
-   private:     
-      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;     
+   private:
+      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;
       void ServiceRoutine();
    public:
       int8_t nLeftTarget;

@@ -21,7 +21,6 @@
 
 class Firmware {
 public:
-      
    static Firmware& GetInstance() {
       return _firmware;
    }
@@ -43,8 +42,6 @@ public:
    }
 
    void Exec() {
-      uint8_t punTxData[8];
-
       m_cAccelerometerSystem.Init();
 
       for(;;) {
@@ -53,12 +50,10 @@ public:
          if(m_cPacketControlInterface.GetState() == CPacketControlInterface::EState::RECV_COMMAND) {
             CPacketControlInterface::CPacket cPacket = m_cPacketControlInterface.GetPacket();
             switch(cPacket.GetType()) {
-            case CPacketControlInterface::CPacket::EType::SET_DDS_ENABLE: 
-               fprintf(Firmware::GetInstance().m_psHUART, "SET_DDS_ENABLE: ");
+            case CPacketControlInterface::CPacket::EType::SET_DDS_ENABLE:
                /* Set the enable signal for the differential drive system */
-               if(cPacket.HasData() && cPacket.GetDataLength() == 1) {
+               if(cPacket.GetDataLength() == 1) {
                   const uint8_t* punRxData = cPacket.GetDataPointer();
-                  fprintf(Firmware::GetInstance().m_psHUART, "%c\r\n", (punRxData[0] == 0)?'0':'1');
                   if(punRxData[0] == 0) {
                      m_cDifferentialDriveSystem.Disable();
                   }
@@ -68,24 +63,38 @@ public:
                }
                break;
             case CPacketControlInterface::CPacket::EType::SET_DDS_SPEED:
-               fprintf(Firmware::GetInstance().m_psHUART, "SET_DDS_SPEED: ");
                /* Set the speed of the differential drive system */
                if(cPacket.HasData() && cPacket.GetDataLength() == 2) {
                   const uint8_t* punRxData = cPacket.GetDataPointer();
                   int8_t nLeftVelocity = reinterpret_cast<const int8_t&>(punRxData[0]);
                   int8_t nRightVelocity = reinterpret_cast<const int8_t&>(punRxData[1]);
-                  fprintf(Firmware::GetInstance().m_psHUART, "%d %d\r\n", nLeftVelocity, nRightVelocity);
                   m_cDifferentialDriveSystem.SetTargetVelocity(nLeftVelocity, nRightVelocity);
-                  //m_cPacketCommandInterface.SendAck(cRxCommand, true);
                }
                break;
             case CPacketControlInterface::CPacket::EType::GET_DDS_SPEED:
-               /* Get the speed of the differential drive system */
-               reinterpret_cast<int8_t&>(punTxData[0]) = m_cDifferentialDriveSystem.GetLeftVelocity();
-               reinterpret_cast<int8_t&>(punTxData[1]) = m_cDifferentialDriveSystem.GetRightVelocity();
-               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_DDS_SPEED,
-                                                    punTxData,
-                                                    2);
+               if(cPacket.GetDataLength() == 0) {
+                  uint8_t punTxData[2];
+                  /* Get the speed of the differential drive system */
+                  reinterpret_cast<int8_t&>(punTxData[0]) = m_cDifferentialDriveSystem.GetLeftVelocity();
+                  reinterpret_cast<int8_t&>(punTxData[1]) = m_cDifferentialDriveSystem.GetRightVelocity();
+                  m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_DDS_SPEED,
+                                                       punTxData,
+                                                       2);
+               }
+               break;
+            case CPacketControlInterface::CPacket::EType::GET_UPTIME:
+               if(cPacket.GetDataLength() == 0) {
+                  uint32_t unUptime = m_cTimer.GetMilliseconds();
+                  uint8_t punTxData[] = {
+                     uint8_t((unUptime >> 24) & 0xFF),
+                     uint8_t((unUptime >> 16) & 0xFF),
+                     uint8_t((unUptime >> 8 ) & 0xFF),
+                     uint8_t((unUptime >> 0 ) & 0xFF)
+                  };
+                  m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_UPTIME,
+                                                       punTxData,
+                                                       4);
+               }
                break;
                /*
             case CPacketControlInterface::CPacket::EType::GET_ACCEL_READING:
@@ -103,9 +112,8 @@ public:
                */
             default:
                /* unknown command */
-               break;       
+               break;
             }
-            //m_cPacketControlInterface.Reset();
          }
       }
    }

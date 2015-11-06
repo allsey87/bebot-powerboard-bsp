@@ -5,6 +5,9 @@
 
 CPacketControlInterface::CPacket::EType CPacketControlInterface::CPacket::GetType() const {
    switch(m_unTypeId) {
+   case 0x00:
+      return EType::GET_UPTIME;
+      break;
    case 0x10:
       return EType::SET_DDS_ENABLE;
       break;
@@ -13,6 +16,12 @@ CPacketControlInterface::CPacket::EType CPacketControlInterface::CPacket::GetTyp
       break;
    case 0x12:
       return EType::GET_DDS_SPEED;
+      break;
+   case 0x13:
+      return EType::SET_DDS_PARAMS;
+      break;
+   case 0x14:
+      return EType::GET_DDS_PARAMS;
       break;
    default:
       return EType::INVALID;

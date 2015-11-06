@@ -58,9 +58,9 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
    OCR0A = 0;
    OCR0B = 0;
 
-   /* Enable port change interrupts for right encoder A/B 
+   /* Enable port change interrupts for right encoder A/B
       and left encoder A/B respectively */
-   PCMSK1 |= (1 << PCINT8)  | (1 << PCINT9) | 
+   PCMSK1 |= (1 << PCINT8)  | (1 << PCINT9) |
              (1 << PCINT10) | (1 << PCINT11);
    /* Enable the port change interrupt group PCINT[14:8] */
    PCICR |= (1 << PCIE1);
@@ -120,21 +120,21 @@ void CDifferentialDriveSystem::ConfigureLeftMotor(CDifferentialDriveSystem::EBri
    switch(e_mode) {
    case EBridgeMode::REVERSE_PWM_FD:
       PORTD |= LEFT_CTRL_PIN;
-      PORTD &= ~LEFT_MODE_PIN; //
+      PORTD &= ~LEFT_MODE_PIN;
       break;
    case EBridgeMode::REVERSE_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD &= ~LEFT_CTRL_PIN;
-      PORTD |= LEFT_MODE_PIN; //
+      PORTD |= LEFT_MODE_PIN;
       break;
    case EBridgeMode::FORWARD_PWM_FD:
       PORTD &= ~LEFT_CTRL_PIN;
-      PORTD &= ~LEFT_MODE_PIN; //
+      PORTD &= ~LEFT_MODE_PIN;
       break;
    case EBridgeMode::FORWARD_PWM_SD:
       un_duty_cycle = 0xFF - un_duty_cycle;
       PORTD |= LEFT_CTRL_PIN;
-      PORTD |= LEFT_MODE_PIN; //
+      PORTD |= LEFT_MODE_PIN;
       break;
    case EBridgeMode::COAST:
       PORTD &= ~(LEFT_PWM_PIN | LEFT_CTRL_PIN | LEFT_MODE_PIN);
@@ -154,9 +154,9 @@ void CDifferentialDriveSystem::ConfigureLeftMotor(CDifferentialDriveSystem::EBri
       break;
    }
 
-   if(e_mode == EBridgeMode::COAST   || 
-      e_mode == EBridgeMode::REVERSE || 
-      e_mode == EBridgeMode::FORWARD || 
+   if(e_mode == EBridgeMode::COAST   ||
+      e_mode == EBridgeMode::REVERSE ||
+      e_mode == EBridgeMode::FORWARD ||
       e_mode == EBridgeMode::BRAKE) {
       /* disconnect PWM from the output pin */
       OCR0A = 0;
@@ -211,9 +211,9 @@ void CDifferentialDriveSystem::ConfigureRightMotor(CDifferentialDriveSystem::EBr
       break;
    }
 
-   if(e_mode == EBridgeMode::COAST   || 
-      e_mode == EBridgeMode::REVERSE || 
-      e_mode == EBridgeMode::FORWARD || 
+   if(e_mode == EBridgeMode::COAST   ||
+      e_mode == EBridgeMode::REVERSE ||
+      e_mode == EBridgeMode::FORWARD ||
       e_mode == EBridgeMode::BRAKE) {
       /* disconnect PWM from the output pin */
       OCR0B = 0;
@@ -233,7 +233,7 @@ void CDifferentialDriveSystem::CShaftEncodersInterrupt::ServiceRoutine() {
    uint8_t unPortSnapshot = PINC;
    uint8_t unPortDelta = unPortLast ^ unPortSnapshot;
    /* This intermediate value determines whether the motors are moving
-      backwards or forwards. The expression uses Reed-Muller logic and 
+      backwards or forwards. The expression uses Reed-Muller logic and
       leverages the symmetry of the encoder inputs */
    uint8_t unIntermediate = (~unPortSnapshot) ^ (unPortLast >> 1);
    /* check the left encoder */
@@ -263,30 +263,37 @@ void CDifferentialDriveSystem::CShaftEncodersInterrupt::ServiceRoutine() {
 void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    /* Calculate left PID intermediates */
    int16_t nLeftError = int16_t(nLeftTarget) - m_pcDifferentialDriveSystem->nLeftSteps;
+   /* Accumulate and saturate the integral component */
    nLeftErrorIntegral += nLeftError;
+   nLeftErrorIntegral = nLeftErrorIntegral > int16_t(UINT8_MAX) ? int16_t(UINT8_MAX) :
+      (nLeftErrorIntegral < -int16_t(UINT8_MAX) ? -int16_t(UINT8_MAX) : nLeftErrorIntegral);
    int16_t nLeftErrorDerivative = (nLeftError - nLeftLastError);
    nLeftLastError = nLeftError;
    /* Calculate output value */
-   int16_t nLeftOutput = 
+   int16_t nLeftOutput =
       nKp * nLeftError +
       nKi * nLeftErrorIntegral +
       nKd * nLeftErrorDerivative;
    /* Saturation the output value at +/-100% duty cycle */
-   nLeftOutput = nLeftOutput > 0xFF ? 0xFF :
-      nLeftOutput < -0xFF ? -0xFF : nLeftOutput;
-   /* Calculate right PID intermediates */   
+   nLeftOutput = nLeftOutput > int16_t(UINT8_MAX) ? int16_t(UINT8_MAX) :
+      (nLeftOutput < -int16_t(UINT8_MAX) ? -int16_t(UINT8_MAX) : nLeftOutput);
+   /* Calculate right PID intermediates */
    int16_t nRightError = int16_t(nRightTarget) - m_pcDifferentialDriveSystem->nRightSteps;
+   /* Accumulate and saturate the integral component */
    nRightErrorIntegral += nRightError;
+   nRightErrorIntegral = nRightErrorIntegral > int16_t(UINT8_MAX) ? int16_t(UINT8_MAX) :
+      (nRightErrorIntegral < -int16_t(UINT8_MAX) ? -int16_t(UINT8_MAX) : nRightErrorIntegral);
    int16_t nRightErrorDerivative = (nRightError - nRightLastError);
    nRightLastError = nRightError;
    /* Calculate output value */
-   int16_t nRightOutput = 
+   int16_t nRightOutput =
       nKp * nRightError +
       nKi * nRightErrorIntegral +
       nKd * nRightErrorDerivative;
    /* Saturation the output value at +/-100% duty cycle */
-   nRightOutput = nRightOutput > 0xFF ? 0xFF :
-      nRightOutput < -0xFF ? -0xFF : nRightOutput;  
+   nRightOutput = nRightOutput > int16_t(UINT8_MAX) ? int16_t(UINT8_MAX) :
+      (nRightOutput < -int16_t(UINT8_MAX) ? -int16_t(UINT8_MAX) : nRightOutput);
+
    /* Update motors */
    m_pcDifferentialDriveSystem->ConfigureLeftMotor(
       nLeftOutput < 0 ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
@@ -308,8 +315,8 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
 /****************************************/
 
 CDifferentialDriveSystem::CShaftEncodersInterrupt::CShaftEncodersInterrupt(
-   CDifferentialDriveSystem* pc_differential_drive_system, 
-   uint8_t un_intr_vect_num) : 
+   CDifferentialDriveSystem* pc_differential_drive_system,
+   uint8_t un_intr_vect_num) :
    m_pcDifferentialDriveSystem(pc_differential_drive_system),
    unPortLast(0) {
    Register(this, un_intr_vect_num);
@@ -319,8 +326,8 @@ CDifferentialDriveSystem::CShaftEncodersInterrupt::CShaftEncodersInterrupt(
 /****************************************/
 
 CDifferentialDriveSystem::CPIDControlStepInterrupt::CPIDControlStepInterrupt(
-   CDifferentialDriveSystem* pc_differential_drive_system, 
-   uint8_t un_intr_vect_num) : 
+   CDifferentialDriveSystem* pc_differential_drive_system,
+   uint8_t un_intr_vect_num) :
    m_pcDifferentialDriveSystem(pc_differential_drive_system),
    nLeftTarget(0),
    nLeftLastError(0),
