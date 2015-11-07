@@ -23,15 +23,7 @@ public:
       GND = 0x0F
    };
 
-   CADCController() {
-      /* Initialize the analog to digital converter */
-      /* Use the internal 1.1V reference, left align result */
-      ADMUX |= ((1 << REFS1) | (1 << REFS0) |
-                (1 << ADLAR));
-      /* Enable the ADC and set the prescaler to 64, (8MHz / 64 = 125kHz) */
-      ADCSRA |= ((1 << ADEN) | (1 << ADPS2) | (1 << ADPS1));
-   }
-
+public:
    uint8_t GetValue(EChannel e_channel) {
       /* select the channel to do the conversion */
       uint8_t unADMuxSetting = ADMUX;
@@ -45,6 +37,24 @@ public:
       /* Return the result */
       return ADCH;
    }
+
+   static CADCController& GetInstance() {
+      return m_cADCControllerInstance;
+   }
+
+private:
+
+   static CADCController m_cADCControllerInstance;
+
+   CADCController() {
+      /* Initialize the analog to digital converter */
+      /* Use the internal 1.1V reference, left align result */
+      ADMUX |= ((1 << REFS1) | (1 << REFS0) |
+                (1 << ADLAR));
+      /* Enable the ADC and set the prescaler to 64, (8MHz / 64 = 125kHz) */
+      ADCSRA |= ((1 << ADEN) | (1 << ADPS2) | (1 << ADPS1));
+   }
+
 };
 
 #endif

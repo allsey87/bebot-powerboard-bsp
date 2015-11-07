@@ -15,10 +15,12 @@
 /* Firmware Headers */
 #include <usb_interface_system.h>
 #include <power_management_system.h>
+#include <packet_control_interface.h>
 
+#include <adc_controller.h>
 #include <huart_controller.h>
-#include <tw_controller.h>
 #include <timer.h>
+#include <tw_controller.h>
 
 class CFirmware {
 public:
@@ -31,12 +33,8 @@ public:
       m_psHUART = ps_huart;
    }
 
-   /*
+
    CHUARTController& GetHUARTController() {
-      return m_cHUARTController;
-   }
-   */
-   HardwareSerial& GetHUARTController() {
       return m_cHUARTController;
    }
 
@@ -65,8 +63,9 @@ private:
                TIFR2,
                TCNT2,
                TIMER2_OVF_vect_num),
-      m_cHUARTController(HardwareSerial::instance()),
+      m_cHUARTController(CHUARTController::instance()),
       m_cTWController(CTWController::GetInstance()),
+      m_cPacketControlInterface(m_cHUARTController),
       m_cPowerEventInterrupt(this, PCINT1_vect_num),
       m_eSwitchState(ESwitchState::RELEASED),
       m_unSwitchPressedTime(0),
@@ -85,10 +84,11 @@ private:
 
    /* ATMega328P Controllers */
    /* TODO remove singleton and reference from HUART */
-   //CHUARTController& m_cHUARTController;
-   HardwareSerial& m_cHUARTController;
+   CHUARTController& m_cHUARTController;
  
    CTWController& m_cTWController;
+
+   CPacketControlInterface m_cPacketControlInterface;
 
    CUSBInterfaceSystem m_cUSBInterfaceSystem;
 

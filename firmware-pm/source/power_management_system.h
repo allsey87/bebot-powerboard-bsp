@@ -18,7 +18,9 @@ public:
 
    void SetActuatorPowerOn(bool b_set_power_on);
 
-   void SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on);
+   void SetPassthroughPowerOn(bool b_set_power_on);
+
+   void SetActuatorInputLimitOverride(CBQ24250Module::EInputLimit e_actuator_input_limit_override);
 
    bool IsUSBConnected();
 
@@ -26,7 +28,7 @@ public:
 
    bool IsActuatorPowerOn();
 
-   bool IsSystemToActuatorPassthroughPowerOn();
+   bool IsPassthroughPowerOn();
 
    void Update();
 
@@ -34,8 +36,6 @@ public:
 
 
 private:
-   CADCController m_cADCController;
-
    CBQ24161Module m_cSystemPowerManager;
    CBQ24250Module m_cActuatorPowerManager;
 
@@ -44,6 +44,8 @@ private:
 
    uint16_t m_unSystemBatteryVoltage;
    uint16_t m_unActuatorBatteryVoltage;
+
+   CBQ24250Module::EInputLimit m_eActuatorInputLimitOverride;
 };
 
 #endif

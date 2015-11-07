@@ -53,17 +53,17 @@
 
 CPowerManagementSystem::CPowerManagementSystem() :
    m_cBatteryStatusLEDs(BATT_STATUS_LEDS_ADDR),
-   m_cInputStatusLEDs(INPUT_STATUS_LEDS_ADDR) {
-}
+   m_cInputStatusLEDs(INPUT_STATUS_LEDS_ADDR),
+   m_eActuatorInputLimitOverride(CBQ24250Module::EInputLimit::LHIZ) {}
 
 /***********************************************************/
 /***********************************************************/
 
 void CPowerManagementSystem::Init() {
    /* Init base power configuration */
-   SetSystemToActuatorPassthroughPowerOn(true);
-   SetActuatorPowerOn(false);
    SetSystemPowerOn(true);
+   SetPassthroughPowerOn(true);
+   SetActuatorPowerOn(false);
 
    /* Init output control pins - this overrides hardware pull ups / downs */
    DDRD |= (PIN_ACTUATORS_EN | PIN_SYSTEM_EN | PIN_PASSTHROUGH_EN);
@@ -123,19 +123,26 @@ void CPowerManagementSystem::SetActuatorPowerOn(bool b_set_power_on) {
 /***********************************************************/
 /***********************************************************/
 
-void CPowerManagementSystem::SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on) {
+void CPowerManagementSystem::SetPassthroughPowerOn(bool b_set_power_on) {
    if(b_set_power_on) {
       fprintf(CFirmware::GetInstance().m_psHUART,
-              "SYS_TO_ACT(%s->ON)\r\n",
-              IsSystemToActuatorPassthroughPowerOn()?"ON":"OFF");
+              "PASSTHOUGH(%s->ON)\r\n",
+              IsPassthroughPowerOn()?"ON":"OFF");
       PORTD |= PIN_PASSTHROUGH_EN;
    }
    else {
       fprintf(CFirmware::GetInstance().m_psHUART,
-              "SYS_TO_ACT(%s->OFF)\r\n",
-              IsSystemToActuatorPassthroughPowerOn()?"ON":"OFF");
+              "PASSTHOUGH(%s->OFF)\r\n",
+              IsPassthroughPowerOn()?"ON":"OFF");
       PORTD &= ~PIN_PASSTHROUGH_EN;
    }
+}
+
+/***********************************************************/
+/***********************************************************/
+
+void CPowerManagementSystem::SetActuatorInputLimitOverride(CBQ24250Module::EInputLimit e_actuator_input_limit_override) {
+   m_eActuatorInputLimitOverride = e_actuator_input_limit_override;
 }
 
 /***********************************************************/
@@ -155,7 +162,7 @@ bool CPowerManagementSystem::IsActuatorPowerOn() {
 /***********************************************************/
 /***********************************************************/
 
-bool CPowerManagementSystem::IsSystemToActuatorPassthroughPowerOn() {
+bool CPowerManagementSystem::IsPassthroughPowerOn() {
    return ((PORTD & PIN_PASSTHROUGH_EN) != 0);
 }
 
@@ -287,9 +294,9 @@ void CPowerManagementSystem::Update() {
 
    /* Read battery voltages */
    m_unSystemBatteryVoltage =
-      m_cADCController.GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF;
+      CADCController::GetInstance().GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF;
    m_unActuatorBatteryVoltage =
-      m_cADCController.GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF;
+      CADCController::GetInstance().GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF;
 
    /* Allocate power to the system if switched on */
    if(IsSystemPowerOn()) {
@@ -374,31 +381,36 @@ void CPowerManagementSystem::Update() {
       unAvailableCurrent = 0;
    }
 
-   /* eInputLimit defines the remaining power that we could forward to the actuator system */
+   /* eActuatorInputLimit defines the remaining power that we forward to the actuator system */
    CBQ24250Module::EInputLimit eActuatorInputLimit;
-   /* Select eInputLimit, depending on the remaining current */
-   if(unAvailableCurrent > 900) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L900;
-   }
-   else if(unAvailableCurrent > 500) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
-   }
-   else if(unAvailableCurrent > 150) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L150;
-   }
-   else if(unAvailableCurrent > 100) {
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::L100;
+
+   if(m_eActuatorInputLimitOverride == CBQ24250Module::EInputLimit::LHIZ) {
+      /* Select eInputLimit, depending on the remaining current */
+      if(unAvailableCurrent > 900) {
+         eActuatorInputLimit = CBQ24250Module::EInputLimit::L900;
+      }
+      else if(unAvailableCurrent > 500) {
+         eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
+      }
+      else if(unAvailableCurrent > 150) {
+         eActuatorInputLimit = CBQ24250Module::EInputLimit::L150;
+      }
+      else if(unAvailableCurrent > 100) {
+         eActuatorInputLimit = CBQ24250Module::EInputLimit::L100;
+      }
+      else {
+         /* If the remaining current on the system line is less than 100mA there is no point
+            forwarding it to the actuator system. Note, when in HIZ the BQ24250 still operates */
+         eActuatorInputLimit = CBQ24250Module::EInputLimit::LHIZ;
+         unAvailableCurrent = 0;
+      }
    }
    else {
-      /* If the remaining current on the system line is less than 100mA there is no point
-         forwarding it to the actuator system. Note, when in HIZ the BQ24250 still operates */
-      eActuatorInputLimit = CBQ24250Module::EInputLimit::LHIZ;
-      unAvailableCurrent = 0;
+      eActuatorInputLimit = m_eActuatorInputLimitOverride;
    }
-   /* Set the input limit */
-   eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
-   m_cActuatorPowerManager.SetInputLimit(eActuatorInputLimit);
 
+   /* Set the input limit */
+   m_cActuatorPowerManager.SetInputLimit(eActuatorInputLimit);
    /* Allocate power to the actuators if switched on */
    if(IsActuatorPowerOn()) {
       if(unAvailableCurrent > ACT_POWER_REQ) {
@@ -507,9 +519,9 @@ void CPowerManagementSystem::PrintStatus() {
            IsActuatorPowerOn()?"on":"off");
    fprintf(CFirmware::GetInstance().m_psHUART, "<Batteries>\r\n");
    fprintf(CFirmware::GetInstance().m_psHUART, "Batt 1: %u\r\n",
-           m_cADCController.GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF);
+           CADCController::GetInstance().GetValue(CADCController::EChannel::ADC6) * ADC_BATT_MV_COEFF);
    fprintf(CFirmware::GetInstance().m_psHUART, "Batt 2: %u\r\n",
-           m_cADCController.GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF);
+           CADCController::GetInstance().GetValue(CADCController::EChannel::ADC7) * ADC_BATT_MV_COEFF);
 
    /* System power manager */
    m_cSystemPowerManager.Synchronize();

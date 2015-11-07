@@ -128,52 +128,30 @@ void CFirmware::Exec()
 {
    uint32_t unLastSyncTime = 0;
    uint32_t unSwitchPressedTime = 0;
-   uint8_t unInput = 0;
-   bool bPrintPrompt = true;
    bool bSyncRequiredSignal = false;
-
-   PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN); 
-   DDRB |= UIS_NRST_PIN | UIS_EN_PIN;
-
-   /* Bring up USB hub */
-   PORTB |= (UIS_EN_PIN);
-   GetTimer().Delay(100);
-   PORTB |= (UIS_NRST_PIN);
-   GetTimer().Delay(100);
-   m_cUSBInterfaceSystem.Enable();
-   GetTimer().Delay(100);
 
    m_cPowerManagementSystem.Init();
    m_cPowerEventInterrupt.Enable();
+   m_cUSBInterfaceSystem.Enable();
 
    for(;;) {
       /* Respond to interrupt signals */
       if(m_bSwitchSignal || m_bUSBSignal || m_bSystemPowerSignal || m_bActuatorPowerSignal) {
-         fprintf(m_psHUART, "IRQs (0x%02x): ", PINC);
          if(m_bSwitchSignal) {
             m_bSwitchSignal = false;
             if(m_eSwitchState == ESwitchState::PRESSED) {
                unSwitchPressedTime = GetTimer().GetMilliseconds();
-               fprintf(m_psHUART, "SW(PRESS)-");
-            }
-            else {
-               fprintf(m_psHUART, "SW(RELEASE)-");
             }
          }
          if(m_bUSBSignal) {
-            fprintf(m_psHUART, "USB-");
             m_bUSBSignal = false;
          }
          if(m_bSystemPowerSignal || m_bActuatorPowerSignal) { 
-            fprintf(m_psHUART, "%s%s", 
-                    m_bSystemPowerSignal ? "PSYS-" : "",
-                    m_bActuatorPowerSignal ? "PACT-" : "");
             m_bSystemPowerSignal = false;
             m_bActuatorPowerSignal = false;
             /* assert the sync required signal */
             bSyncRequiredSignal = true;
          }
-         fprintf(m_psHUART, "\r\n");
       }
 
       /* Check if an update is required */
@@ -186,6 +164,7 @@ void CFirmware::Exec()
          m_cPowerManagementSystem.Update();
       }
 
+      /* Handle the switch state */
       if(m_eSwitchState == ESwitchState::PRESSED) {
          if(m_cPowerManagementSystem.IsSystemPowerOn()) {
             if(GetTimer().GetMilliseconds() - unSwitchPressedTime > HARD_PWDN_PERIOD) {
@@ -198,6 +177,10 @@ void CFirmware::Exec()
                /* Assert the sync required signal */
                bSyncRequiredSignal = true;
             }
+            /* Soft power down */
+            else {
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::REQ_SOFT_PWDN);
+            }
          }
          else { /* !m_cPowerManagementSystem.IsSystemPowerOn() */
             m_cPowerManagementSystem.SetSystemPowerOn(true);
@@ -209,62 +192,87 @@ void CFirmware::Exec()
          }
       }
 
-      if(bPrintPrompt) {
-         fprintf(m_psHUART, "\r\nReady> ");
-         bPrintPrompt = false;
-      }
-      
-      /* check for input command */
-      if(CFirmware::GetInstance().GetHUARTController().Available()) {
-         unInput = CFirmware::GetInstance().GetHUARTController().Read();
-         /* flush */
-         while(CFirmware::GetInstance().GetHUARTController().Available()) {
-            CFirmware::GetInstance().GetHUARTController().Read();
-         }
-      }
-      else {
-         unInput = 0;
-      }
+      /* Process inbound packets */
+      m_cPacketControlInterface.ProcessInput();
 
-      /* process input command */
-      if(unInput != 0) {
-         fprintf(m_psHUART, "\r\n");
-         switch(unInput) {
-         case 'A':
-            m_cPowerManagementSystem.SetActuatorPowerOn(true);
+      if(m_cPacketControlInterface.GetState() == CPacketControlInterface::EState::RECV_COMMAND) {
+         CPacketControlInterface::CPacket cPacket = m_cPacketControlInterface.GetPacket();
+         switch(cPacket.GetType()) {
+         case CPacketControlInterface::CPacket::EType::GET_UPTIME:
+            if(cPacket.GetDataLength() == 0) {
+               uint32_t unUptime = m_cTimer.GetMilliseconds();
+               uint8_t punTxData[] = {
+                  uint8_t((unUptime >> 24) & 0xFF),
+                  uint8_t((unUptime >> 16) & 0xFF),
+                  uint8_t((unUptime >> 8 ) & 0xFF),
+                  uint8_t((unUptime >> 0 ) & 0xFF)
+               };
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_UPTIME,
+                                                    punTxData,
+                                                    4);
+            }
             break;
-         case 'a':
-            m_cPowerManagementSystem.SetActuatorPowerOn(false);
+         case CPacketControlInterface::CPacket::EType::GET_BATT_LVL:
+            if(cPacket.GetDataLength() == 1) {
+               const uint8_t* punRxData = cPacket.GetDataPointer();
+               uint8_t punTxData[] = {
+                  punRxData[0],
+                  CADCController::GetInstance().GetValue((punRxData[0] == 0) ? CADCController::EChannel::ADC6 : 
+                                                                               CADCController::EChannel::ADC7)
+               };
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_BATT_LVL,
+                                                    punTxData,
+                                                    2);
+            }
             break;
-         case 'X':
-            m_cPowerEventInterrupt.Enable();
+         case CPacketControlInterface::CPacket::EType::SET_ACTUATOR_POWER_ENABLE:
+            /* Set the enable signal for the actuator power supply */
+            if(cPacket.GetDataLength() == 1) {
+               const uint8_t* punRxData = cPacket.GetDataPointer();
+               m_cPowerManagementSystem.SetActuatorPowerOn((punRxData[0] != 0) ? true : false);
+            }
             break;
-         case 'x':
-            m_cPowerEventInterrupt.Disable();
+         case CPacketControlInterface::CPacket::EType::SET_ACTUATOR_INPUT_LIMIT_OVERRIDE:
+            /* Set the speed of the differential drive system */
+            if(cPacket.GetDataLength() == 1) {
+               const uint8_t* punRxData = cPacket.GetDataPointer();
+               CBQ24250Module::EInputLimit e_input_limit = CBQ24250Module::EInputLimit::LHIZ;
+               switch (punRxData[0]) {
+               case 1:
+                  e_input_limit = CBQ24250Module::EInputLimit::L100;
+                  break;
+               case 2:
+                  e_input_limit = CBQ24250Module::EInputLimit::L150;
+                  break;
+               case 3:
+                  e_input_limit = CBQ24250Module::EInputLimit::L500;
+                  break;
+               case 4:
+                  e_input_limit = CBQ24250Module::EInputLimit::L900;
+                  break;
+               default:
+                  /* case 0 or invalid is LHIZ (no override / auto mode) */
+                  break;
+               }
+               m_cPowerManagementSystem.SetActuatorInputLimitOverride(e_input_limit);
+            }
             break;
-         case 'p':
-            m_cPowerManagementSystem.PrintStatus();
-            break;
-         case 'e':
-            m_cUSBInterfaceSystem.Disable();
-            PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN);
-            break;
-         case 'E':
-            PORTB |= (UIS_EN_PIN);
-            GetTimer().Delay(100);
-            PORTB |= (UIS_NRST_PIN);
-            GetTimer().Delay(100);
-            m_cUSBInterfaceSystem.Enable();
-            GetTimer().Delay(100);
-            break;
-         case 'u':
-            fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
+         case CPacketControlInterface::CPacket::EType::SET_USBIF_ENABLE:
+            /* Set the enable signal for the USB  power supply */
+            if(cPacket.GetDataLength() == 1) {
+               const uint8_t* punRxData = cPacket.GetDataPointer();
+               if(punRxData[0] == 0) {
+                  m_cUSBInterfaceSystem.Disable();
+               }
+               else {
+                  m_cUSBInterfaceSystem.Enable();
+               }
+            }
             break;
          default:
-            fprintf(m_psHUART, "Unknown command: %c\r\n", static_cast<char>(unInput));
+            /* unknown command */
             break;
          }
-         bPrintPrompt = true;
       }
    }
 }
