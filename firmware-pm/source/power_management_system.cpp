@@ -396,7 +396,6 @@ void CPowerManagementSystem::Update() {
       unAvailableCurrent = 0;
    }
    /* Set the input limit */
-   eActuatorInputLimit = CBQ24250Module::EInputLimit::L500;
    m_cActuatorPowerManager.SetInputLimit(eActuatorInputLimit);
 
    /* Allocate power to the actuators if switched on */

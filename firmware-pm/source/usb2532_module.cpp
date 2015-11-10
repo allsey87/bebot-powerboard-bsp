@@ -23,7 +23,7 @@ void CUSB2532Module::Init() {
    uint8_t unBufferIdx = 0;
    /* write configuration register */
    punBuffer[unBufferIdx++] = 0x00;
-   /* number of bytes to be written (strings + 3 bytes giving the length of each strings) */
+   /* number of bytes to be written (strings + 3 bytes giving the length of each string) */
    punBuffer[unBufferIdx++] = LANGID_BYTES + STRLEN_BYTES + unManufacturerStrLen + unProductStrLen + unSerialStrLen;
    /* starting address MSB */
    punBuffer[unBufferIdx++] = 0x30;
@@ -35,14 +35,13 @@ void CUSB2532Module::Init() {
    /* write language identifier (US English) LSB */
    punBuffer[unBufferIdx++] = 0x09;
 
-
    /* write length of manufacturer string */   
    punBuffer[unBufferIdx++] = unManufacturerStrLen / 2;
    /* write length of product string */   
    punBuffer[unBufferIdx++] = unProductStrLen / 2;
    /* write length of serial string */   
    punBuffer[unBufferIdx++] = unSerialStrLen / 2;
-   
+
    for(uint8_t unIdx = 0; unIdx < unManufacturerStrLen; unIdx++) {
       punBuffer[unBufferIdx++] = reinterpret_cast<const uint8_t*>(pchManufacturer)[unIdx];
    }
@@ -54,11 +53,42 @@ void CUSB2532Module::Init() {
    }
 
    /* write the configuration to memory */
-   //Write(0x0000, unBufferIdx, punBuffer);
+   Write(0x0000, unBufferIdx, punBuffer);
 
    /* transfer the configuration from memory to registers */
-   //Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
+   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
 
+
+   /* Enable string support */
+   unBufferIdx = 0;
+   punBuffer[unBufferIdx++] = 0x00;
+   punBuffer[unBufferIdx++] = 0x01;
+   /* starting address MSB */
+   punBuffer[unBufferIdx++] = 0x30;
+   /* starting address LSB */   
+   punBuffer[unBufferIdx++] = 0x08;
+
+   punBuffer[unBufferIdx++] = 0x01;
+
+      /* write the configuration to memory */
+   Write(0x0000, unBufferIdx, punBuffer);
+
+   /* transfer the configuration from memory to registers */
+   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
+
+
+   /* Read value back */  
+   unBufferIdx = 0;  
+   punBuffer[unBufferIdx++] = 0x01;
+   punBuffer[unBufferIdx++] = 0x30;
+   /* starting address MSB */
+   punBuffer[unBufferIdx++] = 0x30;
+   /* starting address LSB */   
+   punBuffer[unBufferIdx++] = 0x11;
+   Write(0x0000, unBufferIdx, punBuffer);
+   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
+   Read(0x0004, 48, punBuffer);
+      
    /* exit configuration stage and connect the hub */
    Write(static_cast<uint16_t>(ECommand::HUB_ATTACH));
 }
@@ -80,7 +110,10 @@ void CUSB2532Module::Read(uint16_t un_offset, uint8_t un_count, uint8_t* pun_buf
    CFirmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
    CFirmware::GetInstance().GetTWController().EndTransmission(false);
    CFirmware::GetInstance().GetTWController().Read(HUB_CFGMODE_ADDR, un_count, true);
+   fprintf(CFirmware::GetInstance().m_psHUART, "R:");
    for(uint8_t unIdx = 0; unIdx < un_count; unIdx++) {
       pun_buffer[unIdx] = CFirmware::GetInstance().GetTWController().Read();
+      fprintf(CFirmware::GetInstance().m_psHUART, "0x%02x:", pun_buffer[unIdx]);
    }
+   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
 }

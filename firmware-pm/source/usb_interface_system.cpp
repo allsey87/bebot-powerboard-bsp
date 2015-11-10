@@ -19,7 +19,11 @@
 #define RST         0x80
 
 //#define IRQ_PIN     0x01
+/* CHECK CFG_STRAP 2
 
+   FOR I2C, STRAP 1 must be low, SDA and SCL must be pulled up
+
+ */
 
 CUSBInterfaceSystem::CUSBInterfaceSystem() :
    cMCP23008Module(GPIO_PWRCFG_ADDR) {
@@ -28,20 +32,22 @@ CUSBInterfaceSystem::CUSBInterfaceSystem() :
 void CUSBInterfaceSystem::Enable() {
    /* Set up the power and configuration GPIO port */
    /* drive the two-wire pull resistors high, other outputs are low */
-   uint8_t unPort = 0; // TW_SDA_PU | TW_SCL_PU;
+   uint8_t unPort = TW_SDA_PU | TW_SCL_PU;
    cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
    /* set the direction bits for the outputs to override the pull up resistors*/
-   uint8_t unOutputs = CFG_STRAP1 | CFG_STRAP2 | TW_SDA_PU | TW_SCL_PU | TW_INT_EN | RST;
-   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::DIRECTION, ~unOutputs);
+   /* note: zero is output */
+   uint8_t unOutputs = ~(CFG_STRAP1 | CFG_STRAP2 | TW_SDA_PU | TW_SCL_PU | TW_INT_EN | RST);
+   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::DIRECTION, unOutputs);
 
    /* enable the two-wire interface */
-   //unPort |= TW_INT_EN;
-   //cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
+   unPort |= TW_INT_EN;
+   cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
    /* release the hub reset signal */
    unPort |= RST;
    cMCP23008Module.SetRegister(CMCP23008Module::ERegister::PORT, unPort);
    /* Configure the USB2532 */
-   //cUSB2532Module.Init();
+   CFirmware::GetInstance().GetTimer().Delay(5);
+   cUSB2532Module.Init();
 }
 
 void CUSBInterfaceSystem::Disable() {

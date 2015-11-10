@@ -132,16 +132,9 @@ void CFirmware::Exec()
    bool bPrintPrompt = true;
    bool bSyncRequiredSignal = false;
 
+   /* Init with reset active, power disabled */
    PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN); 
    DDRB |= UIS_NRST_PIN | UIS_EN_PIN;
-
-   /* Bring up USB hub */
-   PORTB |= (UIS_EN_PIN);
-   GetTimer().Delay(100);
-   PORTB |= (UIS_NRST_PIN);
-   GetTimer().Delay(100);
-   m_cUSBInterfaceSystem.Enable();
-   GetTimer().Delay(100);
 
    m_cPowerManagementSystem.Init();
    m_cPowerEventInterrupt.Enable();
@@ -230,32 +223,18 @@ void CFirmware::Exec()
       if(unInput != 0) {
          fprintf(m_psHUART, "\r\n");
          switch(unInput) {
-         case 'A':
-            m_cPowerManagementSystem.SetActuatorPowerOn(true);
-            break;
-         case 'a':
-            m_cPowerManagementSystem.SetActuatorPowerOn(false);
-            break;
-         case 'X':
-            m_cPowerEventInterrupt.Enable();
-            break;
-         case 'x':
-            m_cPowerEventInterrupt.Disable();
-            break;
-         case 'p':
+         case '0':
             m_cPowerManagementSystem.PrintStatus();
-            break;
-         case 'e':
-            m_cUSBInterfaceSystem.Disable();
-            PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN);
             break;
          case 'E':
             PORTB |= (UIS_EN_PIN);
-            GetTimer().Delay(100);
             PORTB |= (UIS_NRST_PIN);
-            GetTimer().Delay(100);
             m_cUSBInterfaceSystem.Enable();
-            GetTimer().Delay(100);
+            break;
+         case 'e':
+            m_cUSBInterfaceSystem.Disable();
+            PORTB &= ~(UIS_NRST_PIN);
+            PORTB &= ~(UIS_EN_PIN);
             break;
          case 'u':
             fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
