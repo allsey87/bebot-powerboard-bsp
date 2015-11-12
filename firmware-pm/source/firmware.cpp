@@ -209,20 +209,18 @@ void CFirmware::Exec()
                };
                m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_UPTIME,
                                                     punTxData,
-                                                    4);
+                                                    sizeof(punTxData));
             }
             break;
          case CPacketControlInterface::CPacket::EType::GET_BATT_LVL:
-            if(cPacket.GetDataLength() == 1) {
-               const uint8_t* punRxData = cPacket.GetDataPointer();
+            if(cPacket.GetDataLength() == 0) {
                uint8_t punTxData[] = {
-                  punRxData[0],
-                  CADCController::GetInstance().GetValue((punRxData[0] == 0) ? CADCController::EChannel::ADC6 : 
-                                                                               CADCController::EChannel::ADC7)
+                  CADCController::GetInstance().GetValue(CADCController::EChannel::ADC6),
+                  CADCController::GetInstance().GetValue(CADCController::EChannel::ADC7)         
                };
                m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_BATT_LVL,
                                                     punTxData,
-                                                    2);
+                                                    sizeof(punTxData));
             }
             break;
          case CPacketControlInterface::CPacket::EType::SET_ACTUATOR_POWER_ENABLE:
