@@ -340,7 +340,7 @@ void CPowerManagementSystem::Update() {
          else { /* m_cSystemPowerManager.GetDeviceState() != CBQ24161::EDeviceState::CHARGING */
             m_cSystemPowerManager.SetChargingEnable(false);
             /* system battery voltage is high enough to be considered charged */
-            m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::ON);
+            m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
             m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
          }
       }

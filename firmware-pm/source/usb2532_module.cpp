@@ -3,117 +3,138 @@
 
 #include <firmware.h>
 
+#define HUB_CFG_ENABLE_STRINGS 0x01
+#define HUB_CFG_ENABLE_REMAP 0x08
+
+#define HUB_CFG_ENABLE_COMPOUND 0x08
+
+#define HUB_CFG_MAP_P1P2  0x02
+#define HUB_CFG_MAP_P2P1  0x10
+#define HUB_CFG_MAP_PDIS  0x00
+#define HUB_CFG_NRD_P1P2  0x06
+
 #define HUB_CFGMODE_ADDR 0x2D
 
-#define STRLEN_BYTES 3
-#define LANGID_BYTES 2
-
 void CUSB2532Module::Init() {
-   /* configure the USB hub and attach */
-   const char16_t pchManufacturer[] = u"SCT Paderborn";
-   const char16_t pchProduct[] = u"BeBot";
-   const char16_t pchSerial[] = u"BB129";
+   const char m_pchManufacturer[] = "SCT Paderborn";
+   const char m_pchProduct[] = "Duovero BeBot";
+   /* Fetch the identification number and build the robot serial number */
+   char pchSerial[6];
+   snprintf(pchSerial, sizeof(pchSerial), "BB%03u", CFirmware::GetInstance().GetId());
+
+   /* Enable port remapping and string support on hub */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_CFG3),
+                      HUB_CFG_ENABLE_STRINGS | HUB_CFG_ENABLE_REMAP);
+
+   /* Set language ID to US English (0x0409) */
+   const uint8_t punLangId[] = {0x04, 0x09};
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::LANG_ID_H),
+                      sizeof(punLangId),
+                      punLangId);
    
-   /* calculate length of strings minus the null terminating character */
-   uint8_t unManufacturerStrLen = sizeof(pchManufacturer) - sizeof(char16_t);
-   uint8_t unProductStrLen = sizeof(pchProduct) - sizeof(char16_t);
-   uint8_t unSerialStrLen = sizeof(pchSerial) - sizeof(char16_t);
+   /* Set the string length fields (UTF16, no null-terminating character) */
+   /* Manufacturer */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::MFR_STR_LEN),
+                      sizeof(m_pchManufacturer) - 1);
+   /* Product */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::PRD_STR_LEN),
+                      sizeof(m_pchProduct) - 1);
+   /* Serial number */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::SER_STR_LEN),
+                      sizeof(pchSerial) - 1);
    
-   uint8_t punBuffer[64];
+   uint8_t punBuffer[32];
+   uint8_t unStringBytesWritten = 0;
    uint8_t unBufferIdx = 0;
-   /* write configuration register */
-   punBuffer[unBufferIdx++] = 0x00;
-   /* number of bytes to be written (strings + 3 bytes giving the length of each string) */
-   punBuffer[unBufferIdx++] = LANGID_BYTES + STRLEN_BYTES + unManufacturerStrLen + unProductStrLen + unSerialStrLen;
-   /* starting address MSB */
-   punBuffer[unBufferIdx++] = 0x30;
-   /* starting address LSB */   
-   punBuffer[unBufferIdx++] = 0x11;
-
-   /* write language identifier (US English) MSB */
-   punBuffer[unBufferIdx++] = 0x04;
-   /* write language identifier (US English) LSB */
-   punBuffer[unBufferIdx++] = 0x09;
-
-   /* write length of manufacturer string */   
-   punBuffer[unBufferIdx++] = unManufacturerStrLen / 2;
-   /* write length of product string */   
-   punBuffer[unBufferIdx++] = unProductStrLen / 2;
-   /* write length of serial string */   
-   punBuffer[unBufferIdx++] = unSerialStrLen / 2;
-
-   for(uint8_t unIdx = 0; unIdx < unManufacturerStrLen; unIdx++) {
-      punBuffer[unBufferIdx++] = reinterpret_cast<const uint8_t*>(pchManufacturer)[unIdx];
+   for(const char& ch_char : m_pchManufacturer) {
+      if(ch_char != '\0') {
+         /* convert UTF-8 to UTF-16 */
+         punBuffer[unBufferIdx++] = ch_char;
+         punBuffer[unBufferIdx++] = 0;
+      }
    }
-   for(uint8_t unIdx = 0; unIdx < unProductStrLen; unIdx++) {
-      punBuffer[unBufferIdx++] = reinterpret_cast<const uint8_t*>(pchProduct)[unIdx];
-   }
-   for(uint8_t unIdx = 0; unIdx < unSerialStrLen; unIdx++) {
-      punBuffer[unBufferIdx++] = reinterpret_cast<const uint8_t*>(pchSerial)[unIdx];
-   }
-
-   /* write the configuration to memory */
-   Write(0x0000, unBufferIdx, punBuffer);
-
-   /* transfer the configuration from memory to registers */
-   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
-
-
-   /* Enable string support */
+   unStringBytesWritten += WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::STRINGS) +
+                                              unStringBytesWritten,
+                                              unBufferIdx,
+                                              punBuffer);
    unBufferIdx = 0;
-   punBuffer[unBufferIdx++] = 0x00;
-   punBuffer[unBufferIdx++] = 0x01;
-   /* starting address MSB */
-   punBuffer[unBufferIdx++] = 0x30;
-   /* starting address LSB */   
-   punBuffer[unBufferIdx++] = 0x08;
+   for(const char& ch_char : m_pchProduct) {
 
-   punBuffer[unBufferIdx++] = 0x01;
+      if(ch_char != '\0') {
+         /* convert UTF-8 to UTF-16 */
+         punBuffer[unBufferIdx++] = ch_char;
+         punBuffer[unBufferIdx++] = 0;
+      }
+   }
+   unStringBytesWritten += WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::STRINGS) +
+                                              unStringBytesWritten,
+                                              unBufferIdx,
+                                              punBuffer);
+   unBufferIdx = 0;
+   for(const char& ch_char : pchSerial) {   
+      if(ch_char != '\0') {
+         /* convert UTF-8 to UTF-16 */
+         punBuffer[unBufferIdx++] = ch_char;
+         punBuffer[unBufferIdx++] = 0;
+      }
+   }
+   unStringBytesWritten += WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::STRINGS) +
+                                              unStringBytesWritten,
+                                              unBufferIdx,
+                                              punBuffer);
 
-      /* write the configuration to memory */
-   Write(0x0000, unBufferIdx, punBuffer);
+   /* Swap ports 1/2 so that the FT231 enumerates first */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_PRT_REMAP12),
+                      HUB_CFG_MAP_P1P2 | HUB_CFG_MAP_P2P1);
+   /* Disable ports 3/4/CTRL as these are not used */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_PRT_REMAP34),
+                      HUB_CFG_MAP_PDIS);
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_CTRL_REMAP),
+                      HUB_CFG_MAP_PDIS);       
 
-   /* transfer the configuration from memory to registers */
-   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
+   /* Mark ports 1/2 as non-removable */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::NRD),
+                      HUB_CFG_NRD_P1P2);       
+   /* Device is a compound device */
+   WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_CFG2),
+                      HUB_CFG_ENABLE_COMPOUND);       
 
-
-   /* Read value back */  
-   unBufferIdx = 0;  
-   punBuffer[unBufferIdx++] = 0x01;
-   punBuffer[unBufferIdx++] = 0x30;
-   /* starting address MSB */
-   punBuffer[unBufferIdx++] = 0x30;
-   /* starting address LSB */   
-   punBuffer[unBufferIdx++] = 0x11;
-   Write(0x0000, unBufferIdx, punBuffer);
-   Write(static_cast<uint16_t>(ECommand::EXEC_REG_OP));
-   Read(0x0004, 48, punBuffer);
-      
    /* exit configuration stage and connect the hub */
-   Write(static_cast<uint16_t>(ECommand::HUB_ATTACH));
+   WriteCommand(ECommand::HUB_ATTACH);
 }
 
-void CUSB2532Module::Write(uint16_t un_offset, uint8_t un_count, uint8_t* pun_buffer) {
+uint8_t CUSB2532Module::WriteConfiguration(uint16_t un_address, uint8_t un_data_length, const uint8_t* pun_data) {
+
+   uint8_t punPacketHeader[] = {
+      0x00, /* write configuration register */
+      un_data_length,
+      (un_address >> 8) & 0xFF,
+      (un_address >> 0) & 0xFF
+   };
+
+   /* Write configuration to memory */
    CFirmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
-   CFirmware::GetInstance().GetTWController().Write(un_offset >> 8);
-   CFirmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
-   CFirmware::GetInstance().GetTWController().Write(un_count);
-   for(uint8_t unIdx = 0; unIdx < un_count; unIdx++) {
-      CFirmware::GetInstance().GetTWController().Write(pun_buffer[unIdx]);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().Write(sizeof(punPacketHeader) + un_data_length);
+   for(const uint8_t& un_byte : punPacketHeader) {
+      CFirmware::GetInstance().GetTWController().Write(un_byte);
    }
+   for(uint8_t unIdx = 0; unIdx < un_data_length; unIdx++) {
+      CFirmware::GetInstance().GetTWController().Write(pun_data[unIdx]);
+   }
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
+   /* Transfer configuration to registers */
+   WriteCommand(ECommand::EXEC_REG_OP);
+
+   return un_data_length;
+}
+
+void CUSB2532Module::WriteCommand(CUSB2532Module::ECommand e_command) {
+   CFirmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
+   CFirmware::GetInstance().GetTWController().Write((static_cast<uint16_t>(e_command) >> 8) & 0xFF);
+   CFirmware::GetInstance().GetTWController().Write((static_cast<uint16_t>(e_command) >> 0) & 0xFF);
+   CFirmware::GetInstance().GetTWController().Write(0x00);
    CFirmware::GetInstance().GetTWController().EndTransmission(true);
 }
 
-void CUSB2532Module::Read(uint16_t un_offset, uint8_t un_count, uint8_t* pun_buffer) {
-   CFirmware::GetInstance().GetTWController().BeginTransmission(HUB_CFGMODE_ADDR);
-   CFirmware::GetInstance().GetTWController().Write(un_offset >> 8);
-   CFirmware::GetInstance().GetTWController().Write(un_offset & 0xFF);
-   CFirmware::GetInstance().GetTWController().EndTransmission(false);
-   CFirmware::GetInstance().GetTWController().Read(HUB_CFGMODE_ADDR, un_count, true);
-   fprintf(CFirmware::GetInstance().m_psHUART, "R:");
-   for(uint8_t unIdx = 0; unIdx < un_count; unIdx++) {
-      pun_buffer[unIdx] = CFirmware::GetInstance().GetTWController().Read();
-      fprintf(CFirmware::GetInstance().m_psHUART, "0x%02x:", pun_buffer[unIdx]);
-   }
-   fprintf(CFirmware::GetInstance().m_psHUART, "\r\n");
-}

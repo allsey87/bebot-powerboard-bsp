@@ -27,6 +27,8 @@ public:
       return _firmware;
    }
 
+   uint8_t GetId();
+
    void SetFilePointer(FILE* ps_huart) {
       m_psHUART = ps_huart;
    }

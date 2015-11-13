@@ -1,5 +1,7 @@
 #include "firmware.h"
 
+#include <pca9554_module.h>
+
 /***********************************************************/
 /***********************************************************/
 
@@ -7,9 +9,6 @@
 #define PORTC_HUB_IRQ 0x02
 #define PORTC_SYSTEM_POWER_IRQ 0x04
 #define PORTC_ACTUATOR_POWER_IRQ 0x08
-
-#define UIS_EN_PIN  0x01
-#define UIS_NRST_PIN 0x02
 
 /***********************************************************/
 /***********************************************************/
@@ -46,6 +45,13 @@ int main(void)
    CFirmware::GetInstance().Exec();
    /* Terminate */
    return 0;
+}
+
+/***********************************************************/
+/***********************************************************/
+
+uint8_t CFirmware::GetId() {
+   return ~CPCA9554Module<0x20>::GetInstance().GetRegister(CPCA9554Module<0x20>::ERegister::INPUT);
 }
 
 /***********************************************************/
@@ -131,11 +137,7 @@ void CFirmware::Exec()
    uint8_t unInput = 0;
    bool bPrintPrompt = true;
    bool bSyncRequiredSignal = false;
-
-   /* Init with reset active, power disabled */
-   PORTB &= ~(UIS_NRST_PIN | UIS_EN_PIN); 
-   DDRB |= UIS_NRST_PIN | UIS_EN_PIN;
-
+  
    m_cPowerManagementSystem.Init();
    m_cPowerEventInterrupt.Enable();
 
@@ -227,14 +229,10 @@ void CFirmware::Exec()
             m_cPowerManagementSystem.PrintStatus();
             break;
          case 'E':
-            PORTB |= (UIS_EN_PIN);
-            PORTB |= (UIS_NRST_PIN);
             m_cUSBInterfaceSystem.Enable();
             break;
          case 'e':
             m_cUSBInterfaceSystem.Disable();
-            PORTB &= ~(UIS_NRST_PIN);
-            PORTB &= ~(UIS_EN_PIN);
             break;
          case 'u':
             fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());
