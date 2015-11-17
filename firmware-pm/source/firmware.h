@@ -92,8 +92,6 @@ private:
  
    CTWController& m_cTWController;
 
-   CUSBInterfaceSystem m_cUSBInterfaceSystem;
-
    CPowerManagementSystem m_cPowerManagementSystem;
 
    class CPowerEventInterrupt : public CInterrupt {

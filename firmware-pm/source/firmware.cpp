@@ -158,6 +158,7 @@ void CFirmware::Exec()
          if(m_bUSBSignal) {
             fprintf(m_psHUART, "USB-");
             m_bUSBSignal = false;
+            bSyncRequiredSignal = true;
          }
          if(m_bSystemPowerSignal || m_bActuatorPowerSignal) { 
             fprintf(m_psHUART, "%s%s", 
@@ -227,12 +228,6 @@ void CFirmware::Exec()
          switch(unInput) {
          case '0':
             m_cPowerManagementSystem.PrintStatus();
-            break;
-         case 'E':
-            m_cUSBInterfaceSystem.Enable();
-            break;
-         case 'e':
-            m_cUSBInterfaceSystem.Disable();
             break;
          case 'u':
             fprintf(m_psHUART, "Uptime = %lums\r\n", m_cTimer.GetMilliseconds());

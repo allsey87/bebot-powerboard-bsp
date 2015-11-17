@@ -5,13 +5,21 @@
 
 class CUSB2532Module {
 public:
+   enum class ERuntimeRegister : uint8_t {
+      SMBUS_PAGE = 0xFF,
+      UP_BC_DET = 0xE2,
+      CHG_DET_MSK = 0xED,        
+   };
+  
    void Init();
-   /*
+
+   void WriteRegister(ERuntimeRegister e_register,
+                      uint8_t un_value,
+                      bool b_on_pg2 = false);
+
+   uint8_t ReadRegister(ERuntimeRegister e_register,
+                        bool b_on_pg2 = false);
    
-   uint8_t SetRegister(uint8_t un_address,
-                       uint8_t un_data_length,
-                       const uint8_t* pun_data);
-   */  
 private:
    enum class EConfigurationRegister : uint16_t {
       HUB_CFG1 = 0x3006,
@@ -24,6 +32,8 @@ private:
       PRD_STR_LEN = 0x3014,
       SER_STR_LEN = 0x3015,
       STRINGS = 0x3016,
+      UP_BC_DET = 0x30E2,
+      BC_CHG_MODE = 0x30E9,   
       HUB_PRT_REMAP12 = 0x30FB,
       HUB_PRT_REMAP34 = 0x30FC,
       HUB_CTRL_REMAP = 0x30FD
@@ -44,7 +54,6 @@ private:
                               uint8_t un_data) {
       return WriteConfiguration(un_address, 1, &un_data);
    }
-
 
    void WriteCommand(ECommand e_command);
 

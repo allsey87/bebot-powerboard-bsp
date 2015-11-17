@@ -20,8 +20,6 @@ public:
 
    void SetSystemToActuatorPassthroughPowerOn(bool b_set_power_on);
 
-   bool IsUSBConnected();
-
    bool IsSystemPowerOn();
 
    bool IsActuatorPowerOn();
