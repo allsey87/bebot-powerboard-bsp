@@ -8,7 +8,8 @@ public:
    enum class ERuntimeRegister : uint8_t {
       SMBUS_PAGE = 0xFF,
       UP_BC_DET = 0xE2,
-      CHG_DET_MSK = 0xED,        
+      BC_CHG_MODE = 0xEC,
+      CHG_DET_MSK = 0xED,
    };
   
    void Init();
@@ -33,7 +34,7 @@ private:
       SER_STR_LEN = 0x3015,
       STRINGS = 0x3016,
       UP_BC_DET = 0x30E2,
-      BC_CHG_MODE = 0x30E9,   
+      BC_CHG_MODE = 0x30EC,   
       HUB_PRT_REMAP12 = 0x30FB,
       HUB_PRT_REMAP34 = 0x30FC,
       HUB_CTRL_REMAP = 0x30FD

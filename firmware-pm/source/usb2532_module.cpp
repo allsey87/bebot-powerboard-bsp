@@ -13,7 +13,7 @@
 #define HUB_CFG_MAP_PDIS        0x00
 #define HUB_CFG_NRD_P1P2        0x06
 #define HUB_CFG_START_CHGDET    0x01
-#define HUB_CFG_ENABLE_ECHGDET  0x0C
+#define HUB_CFG_ENABLE_ECHGDET  0x04
 
 #define HUB_RT_ADDR 0x2C
 
@@ -92,6 +92,7 @@ void CUSB2532Module::Init() {
    /* Disable ports 3/4/CTRL as these are not used */
    WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_PRT_REMAP34),
                       HUB_CFG_MAP_PDIS);
+   /* Disable the hub controller */
    WriteConfiguration(static_cast<uint16_t>(EConfigurationRegister::HUB_CTRL_REMAP),
                       HUB_CFG_MAP_PDIS);       
    /* Mark ports 1/2 as non-removable */
