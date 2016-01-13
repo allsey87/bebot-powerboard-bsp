@@ -65,12 +65,11 @@ public:
       int8_t m_nRightTarget;
       int16_t m_nRightLastError;
       int16_t m_nRightErrorIntegral;
-public:
-      uint8_t m_unKp;
-      uint8_t m_unKi;
-      uint8_t m_unKd;
-      
-      uint8_t m_unScale;
+      const uint8_t m_unIntegralSat;
+      const uint8_t m_unKp;
+      const uint8_t m_unKi;
+      const uint8_t m_unKd;     
+      const uint8_t m_unScale;
    } m_cPIDControlStepInterrupt;
 
    friend CShaftEncodersInterrupt;
