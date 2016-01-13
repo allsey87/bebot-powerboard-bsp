@@ -22,8 +22,6 @@ public:
 
    void SetActuatorInputLimitOverride(CBQ24250Module::EInputLimit e_actuator_input_limit_override);
 
-   bool IsUSBConnected();
-
    bool IsSystemPowerOn();
 
    bool IsActuatorPowerOn();

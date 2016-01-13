@@ -29,6 +29,8 @@ public:
       return _firmware;
    }
 
+   uint8_t GetId();
+
    void SetFilePointer(FILE* ps_huart) {
       m_psHUART = ps_huart;
    }
@@ -89,8 +91,6 @@ private:
    CTWController& m_cTWController;
 
    CPacketControlInterface m_cPacketControlInterface;
-
-   CUSBInterfaceSystem m_cUSBInterfaceSystem;
 
    CPowerManagementSystem m_cPowerManagementSystem;
 

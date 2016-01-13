@@ -58,8 +58,6 @@ public:
    
    void Synchronize();
 
-   //void SetPreferredSource(ESource); //USB / ADAPTER
-
    void DumpRegister(uint8_t un_addr);
 
    void SetInputLimit(ESource e_source, EInputLimit e_input_limit);

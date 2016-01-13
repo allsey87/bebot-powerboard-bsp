@@ -20,8 +20,8 @@
 /* Definitions for status LEDs */
 #define ADP_LED_INDEX 0
 #define USB_LP_LED_INDEX 1
-#define USB_FP_LED_INDEX 2
-#define USB_HP_LED_INDEX 3
+#define USB_HP_LED_INDEX 2
+#define USB_FP_LED_INDEX 3
 
 #define BATT1_STAT_INDEX 0
 #define BATT1_CHRG_INDEX 1
@@ -176,6 +176,75 @@ void CPowerManagementSystem::Update() {
    m_cActuatorPowerManager.ResetWatchdogTimer();
    m_cActuatorPowerManager.Synchronize();
 
+   /* check if the USB port is powered, and enable/disable the hub */
+   if(m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::USB) ==
+      CBQ24161Module::EInputState::NORMAL) {
+      if(!CUSBInterfaceSystem::GetInstance().IsEnabled()) {
+         CUSBInterfaceSystem::GetInstance().Enable();
+      }
+      /* Detect the available USB input power */
+      if(CUSBInterfaceSystem::GetInstance().IsSuspended()) {
+         m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                             CBQ24161Module::EInputLimit::L0);
+         fprintf(CFirmware::GetInstance().m_psHUART, "CT: HUB SUSP\r\n");
+      }
+      else {
+         switch(CUSBInterfaceSystem::GetInstance().GetUSBChargerType()) {   
+         case CUSBInterfaceSystem::EUSBChargerType::DCP:
+         case CUSBInterfaceSystem::EUSBChargerType::SE1S:
+            m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                CBQ24161Module::EInputLimit::L1500);
+            fprintf(CFirmware::GetInstance().m_psHUART, "CT: DCP/SE1S\r\n");
+            break;
+         case CUSBInterfaceSystem::EUSBChargerType::SE1H:
+            m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                CBQ24161Module::EInputLimit::L900);
+            fprintf(CFirmware::GetInstance().m_psHUART, "CT: SE1H\r\n");
+            break;
+         case CUSBInterfaceSystem::EUSBChargerType::CDP:
+            if(CUSBInterfaceSystem::GetInstance().IsHighSpeedMode()) {
+               m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                   CBQ24161Module::EInputLimit::L900);
+               fprintf(CFirmware::GetInstance().m_psHUART, "CT: CDP:HS\r\n");
+            }
+            else {
+               m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                   CBQ24161Module::EInputLimit::L1500);
+               fprintf(CFirmware::GetInstance().m_psHUART, "CT: CDP:LFS\r\n");
+            }
+            break;
+         case CUSBInterfaceSystem::EUSBChargerType::SE1L:
+            m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                CBQ24161Module::EInputLimit::L500);
+            fprintf(CFirmware::GetInstance().m_psHUART, "CT: SE1L\r\n");
+            break;
+         case CUSBInterfaceSystem::EUSBChargerType::SDP:
+            if(CUSBInterfaceSystem::GetInstance().IsHighSpeedMode()) {
+               m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                   CBQ24161Module::EInputLimit::L500);
+               fprintf(CFirmware::GetInstance().m_psHUART, "CT: SDP:HS\r\n");
+            }
+            else {
+               m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                   CBQ24161Module::EInputLimit::L100);
+               fprintf(CFirmware::GetInstance().m_psHUART, "CT: SDP:NOT_HS\r\n");
+            }
+            break;
+         default:
+            m_cSystemPowerManager.SetInputLimit(CBQ24161Module::ESource::USB,
+                                                CBQ24161Module::EInputLimit::L0);
+            fprintf(CFirmware::GetInstance().m_psHUART, "CT: WAIT/DIS\r\n");
+            break;
+         }
+      }
+      m_cSystemPowerManager.Synchronize();
+   }
+   else {
+      if(CUSBInterfaceSystem::GetInstance().IsEnabled()) { 
+         CUSBInterfaceSystem::GetInstance().Disable();
+      }
+   }
+   
    /* Reflect the state of the system power sources on the LEDs */
    /* Adapter */
    switch(m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::ADAPTER)) {
@@ -347,7 +416,7 @@ void CPowerManagementSystem::Update() {
          else { /* m_cSystemPowerManager.GetDeviceState() != CBQ24161::EDeviceState::CHARGING */
             m_cSystemPowerManager.SetChargingEnable(false);
             /* system battery voltage is high enough to be considered charged */
-            m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::ON);
+            m_cBatteryStatusLEDs.SetLEDMode(BATT1_CHRG_INDEX, CPCA9633Module::ELEDMode::OFF);
             m_cBatteryStatusLEDs.SetLEDMode(BATT1_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
          }
       }
@@ -498,14 +567,6 @@ void CPowerManagementSystem::Update() {
       m_cBatteryStatusLEDs.SetLEDMode(BATT2_STAT_INDEX, CPCA9633Module::ELEDMode::ON);
       break;
    }
-}
-
-/***********************************************************/
-/***********************************************************/
-
-bool CPowerManagementSystem::IsUSBConnected() {
-   return m_cSystemPowerManager.GetInputState(CBQ24161Module::ESource::USB) ==
-      CBQ24161Module::EInputState::NORMAL;
 }
 
 /***********************************************************/

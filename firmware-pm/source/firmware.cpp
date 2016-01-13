@@ -1,5 +1,7 @@
 #include "firmware.h"
 
+#include <pca9554_module.h>
+
 /***********************************************************/
 /***********************************************************/
 
@@ -7,9 +9,6 @@
 #define PORTC_HUB_IRQ 0x02
 #define PORTC_SYSTEM_POWER_IRQ 0x04
 #define PORTC_ACTUATOR_POWER_IRQ 0x08
-
-#define UIS_EN_PIN  0x01
-#define UIS_NRST_PIN 0x02
 
 /***********************************************************/
 /***********************************************************/
@@ -46,6 +45,13 @@ int main(void)
    CFirmware::GetInstance().Exec();
    /* Terminate */
    return 0;
+}
+
+/***********************************************************/
+/***********************************************************/
+
+uint8_t CFirmware::GetId() {
+   return ~CPCA9554Module<0x20>::GetInstance().GetRegister(CPCA9554Module<0x20>::ERegister::INPUT);
 }
 
 /***********************************************************/
@@ -132,7 +138,6 @@ void CFirmware::Exec()
 
    m_cPowerManagementSystem.Init();
    m_cPowerEventInterrupt.Enable();
-   m_cUSBInterfaceSystem.Enable();
 
    for(;;) {
       /* Respond to interrupt signals */
@@ -145,6 +150,7 @@ void CFirmware::Exec()
          }
          if(m_bUSBSignal) {
             m_bUSBSignal = false;
+            bSyncRequiredSignal = true;
          }
          if(m_bSystemPowerSignal || m_bActuatorPowerSignal) { 
             m_bSystemPowerSignal = false;
@@ -253,18 +259,6 @@ void CFirmware::Exec()
                   break;
                }
                m_cPowerManagementSystem.SetActuatorInputLimitOverride(e_input_limit);
-            }
-            break;
-         case CPacketControlInterface::CPacket::EType::SET_USBIF_ENABLE:
-            /* Set the enable signal for the USB  power supply */
-            if(cPacket.GetDataLength() == 1) {
-               const uint8_t* punRxData = cPacket.GetDataPointer();
-               if(punRxData[0] == 0) {
-                  m_cUSBInterfaceSystem.Disable();
-               }
-               else {
-                  m_cUSBInterfaceSystem.Enable();
-               }
             }
             break;
          default:

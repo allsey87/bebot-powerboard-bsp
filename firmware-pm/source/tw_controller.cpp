@@ -331,9 +331,12 @@ uint8_t CTWController::EndTransmission(bool b_send_stop) {
    unMasterBufferLength = m_unTxBufferLength;
   
    // copy data to twi buffer
+   if(m_unTxAddress == 0x2d || m_unTxAddress == 0x21) fprintf(CFirmware::GetInstance().m_psHUART, "W(0x%02x)[ ", m_unTxAddress);
    for(uint8_t i = 0; i < m_unTxBufferLength; ++i){
+      if(m_unTxAddress == 0x2d || m_unTxAddress == 0x21) fprintf(CFirmware::GetInstance().m_psHUART, "0x%02x ", m_punTxBuffer[i]);
       punMasterBuffer[i] = m_punTxBuffer[i];
    }
+   if(m_unTxAddress == 0x2d || m_unTxAddress == 0x21) fprintf(CFirmware::GetInstance().m_psHUART, "]\r\n");
   
    // build sla+w, slave device address + w bit
    unSlarw = TW_WRITE;
