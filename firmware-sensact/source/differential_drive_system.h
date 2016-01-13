@@ -18,7 +18,7 @@ public:
    void Enable();
    void Disable();
 
-private:
+public:
    enum class EBridgeMode {
       COAST,
       REVERSE,
@@ -37,45 +37,51 @@ private:
    public:
       CShaftEncodersInterrupt(CDifferentialDriveSystem* pc_differential_drive_system,
                               uint8_t un_intr_vect_num);
+                              
+      void Enable();
+      void Disable();
+   private:
+      void ServiceRoutine();
    private:
       CDifferentialDriveSystem* m_pcDifferentialDriveSystem;
-      void ServiceRoutine();
-      volatile uint8_t unPortLast;
+      volatile uint8_t m_unPortLast;
    } m_cShaftEncodersInterrupt;
 
    class CPIDControlStepInterrupt : public CInterrupt {
    public:
       CPIDControlStepInterrupt(CDifferentialDriveSystem* pc_differential_drive_system, 
                                uint8_t un_intr_vect_num);
-      void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed) {
-         nLeftTarget = n_left_speed;
-         nRightTarget = n_right_speed;
-      }
+      void Enable();
+      void Disable();
+      void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed);
    private:
-      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;
       void ServiceRoutine();
-   public:
-      int8_t nLeftTarget;
-      int16_t nLeftLastError;
-      int16_t nLeftErrorIntegral;
-      int8_t nRightTarget;
-      int16_t nRightLastError;
-      int16_t nRightErrorIntegral;
+   private:   
+      CDifferentialDriveSystem* m_pcDifferentialDriveSystem;      
 
-      int16_t nKp;
-      int16_t nKi;
-      int16_t nKd;
+      int8_t m_nLeftTarget;
+      int16_t m_nLeftLastError;
+      int16_t m_nLeftErrorIntegral;
+      int8_t m_nRightTarget;
+      int16_t m_nRightLastError;
+      int16_t m_nRightErrorIntegral;
+public:
+      uint8_t m_unKp;
+      uint8_t m_unKi;
+      uint8_t m_unKd;
+      
+      uint8_t m_unScale;
    } m_cPIDControlStepInterrupt;
 
    friend CShaftEncodersInterrupt;
    friend CPIDControlStepInterrupt;
 
    /* Actual step count variable */
-   volatile int16_t nLeftSteps;
-   volatile int16_t nRightSteps;
+   volatile int16_t m_nLeftSteps;
+   volatile int16_t m_nRightSteps;
    /* Cached step count variable */
-   volatile int16_t nLeftStepsOut;
-   volatile int16_t nRightStepsOut;
+   volatile int16_t m_nLeftStepsOut;
+   volatile int16_t m_nRightStepsOut;
 
 };
 
