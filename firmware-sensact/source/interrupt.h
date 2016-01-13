@@ -1,8 +1,6 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
-//#include <avr/interrupt.h>
-//#include <avr/io.h>
 #include <stdint.h>
 // http://www.mikrocontroller.net/articles/AVR_Interrupt_Routinen_mit_C%2B%2B
 
@@ -21,7 +19,7 @@ private:
    // static void Handler06() __asm__("__vector_6") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler07() __asm__("__vector_7") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler08() __asm__("__vector_8") __attribute__((__signal__, __used__, __externally_visible__));
-   static void Handler09() __asm__("__vector_9") __attribute__((__signal__, __used__, __externally_visible__));
+   // static void Handler09() __asm__("__vector_9") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler10() __asm__("__vector_10") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler11() __asm__("__vector_11") __attribute__((__signal__, __used__, __externally_visible__));
    // static void Handler12() __asm__("__vector_12") __attribute__((__signal__, __used__, __externally_visible__));
