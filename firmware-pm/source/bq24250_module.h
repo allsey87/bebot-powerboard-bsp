@@ -6,38 +6,38 @@
 class CBQ24250Module {
 public:
 
-   enum class EFault {
-      NONE,
-      INPUT_OVER_VOLTAGE,
-      INPUT_UNDER_VOLTAGE,
-      SLEEP,
-      BATT_THERMAL_SHDN,
-      BATT_OVER_VOLTAGE,
-      DEV_THERMAL_SHDN,
-      DEV_TIMER_FAULT,
-      BATT_DISCONNECTED,
-      ISET_SHORTED,
-      INPUT_FAULT,
-      UNDEFINED
+   enum class EFault : uint8_t {
+      NONE = 0,
+      INPUT_OVER_VOLTAGE = 1,
+      INPUT_UNDER_VOLTAGE = 2,
+      SLEEP = 3,
+      BATT_THERMAL_SHDN = 4,
+      BATT_OVER_VOLTAGE = 5,
+      DEV_THERMAL_SHDN = 6,
+      DEV_TIMER_FAULT = 7,
+      BATT_DISCONNECTED = 8,
+      ISET_SHORTED = 9,
+      INPUT_FAULT = 10,
+      UNDEFINED = 11
    };
 
-   enum class EDeviceState {
-      READY,
-      CHARGING,
-      DONE,
-      FAULT
+   enum class EDeviceState : uint8_t {
+      READY = 0,
+      CHARGING = 1,
+      DONE = 2,
+      FAULT = 3
    };
 
-   enum class EInputLimit {
-      L100,
-      L150,
-      L500,
-      L900,
-      L1500,
-      L2000,
-      LEXT,
-      LPTM,
-      LHIZ
+   enum class EInputLimit : uint8_t {
+      L100 = 0,
+      L150 = 1,
+      L500 = 2,
+      L900 = 3,
+      L1500 = 4,
+      L2000 = 5,
+      LEXT = 6,
+      LPTM = 7,
+      LHIZ = 8
    };
 
 

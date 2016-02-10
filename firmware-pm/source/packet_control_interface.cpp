@@ -23,6 +23,12 @@ CPacketControlInterface::CPacket::EType CPacketControlInterface::CPacket::GetTyp
    case 0x43:
       return EType::REQ_SOFT_PWDN;
       break;
+   case 0x44:
+      return EType::GET_PM_STATUS;
+      break;
+   case 0x45:
+      return EType::GET_USB_STATUS;
+      break;  
    default:
       return EType::INVALID;
       break;

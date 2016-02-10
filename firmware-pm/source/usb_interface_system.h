@@ -8,8 +8,15 @@
 
 class CUSBInterfaceSystem {
 public:
-   enum class EUSBChargerType {
-      DCP, CDP, SDP, SE1L, SE1H, SE1S, WAIT, DISABLED
+   enum class EUSBChargerType : uint8_t {
+      DISABLED = 0, 
+      WAIT = 1,
+      DCP = 2, 
+      CDP = 3, 
+      SDP = 4, 
+      SE1L = 5, 
+      SE1H = 6, 
+      SE1S = 7,
    };
 
 public:

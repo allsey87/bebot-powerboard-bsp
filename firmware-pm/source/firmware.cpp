@@ -150,9 +150,9 @@ void CFirmware::Exec()
          }
          if(m_bUSBSignal) {
             m_bUSBSignal = false;
-            bSyncRequiredSignal = true;
+            //bSyncRequiredSignal = true;
          }
-         if(m_bSystemPowerSignal || m_bActuatorPowerSignal) { 
+         if(m_bSystemPowerSignal || m_bActuatorPowerSignal) {
             m_bSystemPowerSignal = false;
             m_bActuatorPowerSignal = false;
             /* assert the sync required signal */
@@ -197,7 +197,7 @@ void CFirmware::Exec()
             bSyncRequiredSignal = true;
          }
       }
-
+      
       /* Process inbound packets */
       m_cPacketControlInterface.ProcessInput();
 
@@ -225,6 +225,37 @@ void CFirmware::Exec()
                   CADCController::GetInstance().GetValue(CADCController::EChannel::ADC7)         
                };
                m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_BATT_LVL,
+                                                    punTxData,
+                                                    sizeof(punTxData));
+            }
+            break;
+         case CPacketControlInterface::CPacket::EType::GET_PM_STATUS:
+            if(cPacket.GetDataLength() == 0) {
+               uint8_t punTxData[] = {
+                  m_cPowerManagementSystem.IsSystemPowerOn(),
+                  m_cPowerManagementSystem.IsActuatorPowerOn(),
+                  m_cPowerManagementSystem.IsPassthroughPowerOn(),
+                  m_cPowerManagementSystem.IsSystemBatteryCharging(),
+                  m_cPowerManagementSystem.IsActuatorBatteryCharging(),
+                  static_cast<uint8_t>(m_cPowerManagementSystem.GetSystemInputLimit()),
+                  static_cast<uint8_t>(m_cPowerManagementSystem.GetActuatorInputLimit()),
+                  static_cast<uint8_t>(m_cPowerManagementSystem.GetAdapterInputState()),
+                  static_cast<uint8_t>(m_cPowerManagementSystem.GetUSBInputState()),
+               };
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_PM_STATUS,
+                                                    punTxData,
+                                                    sizeof(punTxData));
+            }
+            break;
+         case CPacketControlInterface::CPacket::EType::GET_USB_STATUS:
+            if(cPacket.GetDataLength() == 0) {
+               uint8_t punTxData[] = {
+                  CUSBInterfaceSystem::GetInstance().IsEnabled(),
+                  CUSBInterfaceSystem::GetInstance().IsHighSpeedMode(),
+                  CUSBInterfaceSystem::GetInstance().IsSuspended(),
+                  static_cast<uint8_t>(CUSBInterfaceSystem::GetInstance().GetUSBChargerType()),
+               };
+               m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_USB_STATUS,
                                                     punTxData,
                                                     sizeof(punTxData));
             }

@@ -52,7 +52,6 @@ CUSBInterfaceSystem::CUSBInterfaceSystem() :
 
 bool CUSBInterfaceSystem::IsHighSpeedMode() {
    uint8_t unPort = cMCP23008Module.ReadRegister(CMCP23008Module::ERegister::PORT);
-   fprintf(CFirmware::GetInstance().m_psHUART, "IsHighSpeedMode: unPort: 0x%02x -> %c\r\n", unPort, (((unPort & HUB_HS_IND) ^ ((unPort & HUB_CFG_STRAP1) >> 1)) != 0)?'T':'F');
    return (((unPort & HUB_HS_IND) ^ ((unPort & HUB_CFG_STRAP1) >> 1)) != 0);
 }
 
@@ -61,7 +60,6 @@ bool CUSBInterfaceSystem::IsHighSpeedMode() {
 
 bool CUSBInterfaceSystem::IsSuspended() {
    uint8_t unPort = cMCP23008Module.ReadRegister(CMCP23008Module::ERegister::PORT);
-   fprintf(CFirmware::GetInstance().m_psHUART, "IsSuspended: unPort: 0x%02x ->%c\r\n", unPort, (((unPort & HUB_SUSP_IND) ^ ((unPort & HUB_CFG_STRAP2) >> 1)) != 0)?'T':'F');
    return (((unPort & HUB_SUSP_IND) ^ ((unPort & HUB_CFG_STRAP2) >> 1)) != 0);
 }
 
@@ -123,10 +121,6 @@ void CUSBInterfaceSystem::Disable() {
 CUSBInterfaceSystem::EUSBChargerType CUSBInterfaceSystem::GetUSBChargerType() {
    uint8_t unChgDetReg =
       cUSB2532Module.ReadRegister(CUSB2532Module::ERuntimeRegister::UP_BC_DET);
-
-   fprintf(CFirmware::GetInstance().m_psHUART, "0. unChgDetReg: 0x%02x\r\n", unChgDetReg);
-   
-   fprintf(CFirmware::GetInstance().m_psHUART, "1. BC_CHG_MODE: 0x%02x\r\n", cUSB2532Module.ReadRegister(CUSB2532Module::ERuntimeRegister::BC_CHG_MODE));
    
    if((unChgDetReg & HUB_CHGDET_DONE) == 0) {
       return EUSBChargerType::WAIT;

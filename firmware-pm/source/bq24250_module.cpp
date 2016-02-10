@@ -206,11 +206,6 @@ void CBQ24250Module::SetChargingEnable(bool b_enable) {
 
    uint8_t unRegister = CFirmware::GetInstance().GetTWController().Read();
 
-   /* Debug */
-   fprintf(CFirmware::GetInstance().m_psHUART,
-           "BQ24250: Charging -> %c\r\n",
-           (b_enable?'T':'F'));
-
    /* assure reset is clear */
    unRegister &= ~R1_RST_MASK;
 

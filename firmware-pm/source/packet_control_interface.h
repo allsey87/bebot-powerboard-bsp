@@ -63,7 +63,10 @@ public:
          SET_ACTUATOR_POWER_ENABLE = 0x40,
          SET_ACTUATOR_INPUT_LIMIT_OVERRIDE = 0x41,
          SET_USBIF_ENABLE = 0x42,
+         /* Other */
          REQ_SOFT_PWDN = 0x43,
+         GET_PM_STATUS = 0x44,
+         GET_USB_STATUS = 0x45,
 
          /*************************************/
          /* Manipulator Microcontroller       */

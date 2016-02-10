@@ -27,11 +27,20 @@ public:
    bool IsActuatorPowerOn();
 
    bool IsPassthroughPowerOn();
+   
+   bool IsSystemBatteryCharging();
+
+   bool IsActuatorBatteryCharging();
+   
+   CBQ24161Module::EInputLimit GetSystemInputLimit();
+   
+   CBQ24250Module::EInputLimit GetActuatorInputLimit();
+    
+   CBQ24161Module::EInputState GetAdapterInputState();
+
+   CBQ24161Module::EInputState GetUSBInputState();
 
    void Update();
-
-   void PrintStatus();
-
 
 private:
    CBQ24161Module m_cSystemPowerManager;

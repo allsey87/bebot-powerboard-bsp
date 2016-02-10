@@ -24,7 +24,6 @@ public:
 
    void SetLEDBrightness(uint8_t un_led, uint8_t un_val);
 
-   void SetGlobalBlinkRate(uint8_t un_val);
    void SetGlobalBlinkRate(uint8_t un_period, uint8_t un_duty_cycle);
 
 private:

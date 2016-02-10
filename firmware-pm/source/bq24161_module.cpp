@@ -200,11 +200,6 @@ void CBQ24161Module::SetChargingEnable(bool b_enable) {
 
    uint8_t unRegVal = CFirmware::GetInstance().GetTWController().Read();
 
-   /* Debug */
-   fprintf(CFirmware::GetInstance().m_psHUART,
-           "BQ24161: Charging -> %c\r\n",
-           (b_enable?'T':'F'));
-
    /* clear the reset bit, always set on read */
    unRegVal &= ~R2_RST_MASK;
    /* set the charge enable flag with respect to b_enable */
@@ -364,7 +359,7 @@ void CBQ24161Module::Synchronize() {
    punRegisters[1] = CFirmware::GetInstance().GetTWController().Read();
 
    /* update the preferred source variable */
-   ePreferredSource = (punRegisters[0] & R0_SUPPLY_MASK) ?
+   ePreferredSource = ((punRegisters[0] & R0_SUPPLY_MASK) == 0) ?
       ESource::ADAPTER : ESource::USB;
 
    /* update the selected source & state variables */

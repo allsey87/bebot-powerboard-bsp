@@ -6,54 +6,54 @@
 class CBQ24161Module {
 public:
 
-   enum class EFault {
-      NONE,
-      DEV_THERMAL_SHDN,
-      BATT_THERMAL_SHDN,
-      WATCHDOG_TMR_EXPR,
-      SAFETY_TMR_EXPR,
-      ADAPTER_FAULT,
-      USB_FAULT,
-      BATT_FAULT
+   enum class EFault : uint8_t {
+      NONE = 0,
+      DEV_THERMAL_SHDN = 1,
+      BATT_THERMAL_SHDN = 2,
+      WATCHDOG_TMR_EXPR = 3,
+      SAFETY_TMR_EXPR = 4,
+      ADAPTER_FAULT = 5,
+      USB_FAULT = 6,
+      BATT_FAULT = 7
    };
 
-   enum class ESource {
-      NONE,
-      ADAPTER,
-      USB
+   enum class ESource : uint8_t {
+      NONE = 0,
+      ADAPTER = 1,
+      USB = 2
    };   
 
-   enum class EDeviceState {
-      STANDBY,
-      READY,
-      CHARGING,
-      DONE,
-      FAULT
+   enum class EDeviceState : uint8_t {
+      STANDBY = 0,
+      READY = 1,
+      CHARGING = 2,
+      DONE = 3,
+      FAULT = 4
    };
 
-   enum class EInputState {
-      NORMAL,
-      OVER_VOLTAGE,
-      WEAK_SOURCE,
-      UNDER_VOLTAGE
+   enum class EInputState : uint8_t {
+      NORMAL = 0,
+      OVER_VOLTAGE = 1,
+      WEAK_SOURCE = 2,
+      UNDER_VOLTAGE = 3
    };
 
-   enum class EInputLimit {
-      L0,
-      L100,
-      L150,
-      L500,
-      L800,
-      L900,
-      L1500,
-      L2500
+   enum class EInputLimit : uint8_t {
+      L0 = 0,
+      L100 = 1,
+      L150 = 2,
+      L500 = 3,
+      L800 = 4,
+      L900 = 5,
+      L1500 = 6,
+      L2500 = 7
    };
 
-   enum class EBatteryState {
-      NORMAL,
-      OVER_VOLTAGE,
-      DISCONNECTED,
-      UNDEFINED
+   enum class EBatteryState : uint8_t {
+      NORMAL = 0,
+      OVER_VOLTAGE = 1,
+      DISCONNECTED = 2,
+      UNDEFINED = 3
    };
    
    void Synchronize();
