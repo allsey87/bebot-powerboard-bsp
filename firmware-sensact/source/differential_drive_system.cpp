@@ -67,6 +67,13 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
 /****************************************/
 /****************************************/
 
+void CDifferentialDriveSystem::SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed) {
+   m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_speed, n_right_speed);
+}
+
+/****************************************/
+/****************************************/
+
 int8_t CDifferentialDriveSystem::GetLeftVelocity() {
    int16_t nVelocity;
    uint8_t unSREG = SREG;

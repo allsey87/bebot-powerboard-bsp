@@ -8,10 +8,8 @@ class CDifferentialDriveSystem {
 public:
    CDifferentialDriveSystem();
 
-   void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed) {
-      m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_speed, n_right_speed);
-   }
-
+   void SetTargetVelocity(int8_t n_left_speed, int8_t n_right_speed);
+   
    int8_t GetLeftVelocity();
    int8_t GetRightVelocity();
 
