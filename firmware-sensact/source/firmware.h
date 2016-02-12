@@ -18,9 +18,9 @@
 #include <differential_drive_system.h>
 #include <accelerometer_system.h>
 
-class Firmware {
+class CFirmware {
 public:
-   static Firmware& GetInstance() {
+   static CFirmware& GetInstance() {
       return _firmware;
    }
 
@@ -41,7 +41,7 @@ public:
 private:
 
    /* private constructor */
-   Firmware() :
+   CFirmware() :
       m_cHUARTController(CHUARTController::instance()),
       m_cTWController(CTWController::GetInstance()),
       m_cPacketControlInterface(m_cHUARTController) {     
@@ -61,12 +61,26 @@ private:
    CDifferentialDriveSystem m_cDifferentialDriveSystem;
    CAccelerometerSystem m_cAccelerometerSystem;
 
-   static Firmware _firmware;
+   static CFirmware _firmware;
 
 public: // TODO, don't make these public
     /* File structs for fprintf */
    FILE* m_psHUART;
 
+   volatile int16_t m_nLeftTarget;
+   volatile int16_t m_nLeftError;
+   volatile int16_t nLeftErrorDerivative;
+   volatile float m_fLeftErrorIntegral;
+   volatile float fLeftOutput;
+   volatile uint8_t unLeftDutyCycle;
+   volatile int16_t m_nRightTarget;
+   volatile int16_t m_nRightError;
+   volatile int16_t nRightErrorDerivative;
+   volatile float m_fRightErrorIntegral;
+   volatile float fRightOutput;
+   volatile uint8_t unRightDutyCycle;
+
+   volatile bool m_bNewData = false;
 };
 
 #endif

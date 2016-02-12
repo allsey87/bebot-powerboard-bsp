@@ -10,19 +10,19 @@
 
 bool CAccelerometerSystem::Init() {
    /* Probe */
-   Firmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
-   Firmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::WHOAMI));
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(MPU6050_DEV_ADDR, 1, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::WHOAMI));
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(MPU6050_DEV_ADDR, 1, true);
          
-   if(Firmware::GetInstance().GetTWController().Read() != MPU6050_DEV_ADDR) 
+   if(CFirmware::GetInstance().GetTWController().Read() != MPU6050_DEV_ADDR) 
       return false;
 
    /* select internal clock, disable sleep/cycle mode, enable temperature sensor*/
-   Firmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
-   Firmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::PWR_MGMT_1));
-   Firmware::GetInstance().GetTWController().Write(0x00);
-   Firmware::GetInstance().GetTWController().EndTransmission(true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::PWR_MGMT_1));
+   CFirmware::GetInstance().GetTWController().Write(0x00);
+   CFirmware::GetInstance().GetTWController().EndTransmission(true);
 
    return true;
 }
@@ -35,13 +35,13 @@ CAccelerometerSystem::SReading CAccelerometerSystem::GetReading() {
    /* Buffer for holding accelerometer result */
    uint8_t punRes[8];
 
-   Firmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
-   Firmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::ACCEL_XOUT_H));
-   Firmware::GetInstance().GetTWController().EndTransmission(false);
-   Firmware::GetInstance().GetTWController().Read(MPU6050_DEV_ADDR, 8, true);
+   CFirmware::GetInstance().GetTWController().BeginTransmission(MPU6050_DEV_ADDR);
+   CFirmware::GetInstance().GetTWController().Write(static_cast<uint8_t>(ERegister::ACCEL_XOUT_H));
+   CFirmware::GetInstance().GetTWController().EndTransmission(false);
+   CFirmware::GetInstance().GetTWController().Read(MPU6050_DEV_ADDR, 8, true);
    /* Read the requested 8 bytes */
    for(uint8_t i = 0; i < 8; i++) {
-      punRes[i] = Firmware::GetInstance().GetTWController().Read();
+      punRes[i] = CFirmware::GetInstance().GetTWController().Read();
    }
 
    return SReading { 

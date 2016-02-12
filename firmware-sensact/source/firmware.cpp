@@ -1,7 +1,8 @@
 #include "firmware.h"
+#include "interrupt.h"
 
 /* initialisation of the static singleton */
-Firmware Firmware::_firmware;
+CFirmware CFirmware::_firmware;
 
 /* main function that runs the firmware */
 int main(void)
@@ -12,18 +13,18 @@ int main(void)
    /* Set up FILE structs for fprintf */                           
    fdev_setup_stream(&huart, 
                      [](char c_to_write, FILE* pf_stream) {
-                        Firmware::GetInstance().GetHUARTController().Write(c_to_write);
+                        CFirmware::GetInstance().GetHUARTController().Write(c_to_write);
                         return 1;
                      },
                      [](FILE* pf_stream) {
-                        return int(Firmware::GetInstance().GetHUARTController().Read());
+                        return int(CFirmware::GetInstance().GetHUARTController().Read());
                      },
                      _FDEV_SETUP_RW);
 
-   Firmware::GetInstance().SetFilePointer(&huart);
+   CFirmware::GetInstance().SetFilePointer(&huart);
 
    /* Execute the firmware */
-   Firmware::GetInstance().Exec();
+   CFirmware::GetInstance().Exec();
 
    /* Shutdown */
    return 0;
@@ -32,7 +33,7 @@ int main(void)
 /***********************************************************/
 /***********************************************************/
 
-void Firmware::Exec() {
+void CFirmware::Exec() {
    m_cAccelerometerSystem.Init();
 
    for(;;) {
@@ -55,27 +56,34 @@ void Firmware::Exec() {
             break;
          case CPacketControlInterface::CPacket::EType::SET_DDS_SPEED:
             /* Set the speed of the differential drive system */
-            if(cPacket.GetDataLength() == 2) {
+            if(cPacket.GetDataLength() == 4) {
                const uint8_t* punRxData = cPacket.GetDataPointer();
-               int8_t nLeftVelocity = reinterpret_cast<const int8_t&>(punRxData[0]);
-               int8_t nRightVelocity = reinterpret_cast<const int8_t&>(punRxData[1]);
+               int16_t nLeftVelocity = 0, nRightVelocity = 0;
+               
+               reinterpret_cast<uint16_t&>(nLeftVelocity) = (punRxData[0] << 8) | punRxData[1];
+               reinterpret_cast<uint16_t&>(nRightVelocity) = (punRxData[2] << 8) | punRxData[3];
                m_cDifferentialDriveSystem.SetTargetVelocity(nLeftVelocity, nRightVelocity);
             }
             break;
          case CPacketControlInterface::CPacket::EType::GET_DDS_SPEED:
             if(cPacket.GetDataLength() == 0) {
-               uint8_t punTxData[2];
-               /* Get the speed of the differential drive system */
-               reinterpret_cast<int8_t&>(punTxData[0]) = m_cDifferentialDriveSystem.GetLeftVelocity();
-               reinterpret_cast<int8_t&>(punTxData[1]) = m_cDifferentialDriveSystem.GetRightVelocity();
+               /* Get the speed of the differential drive system */               
+               int16_t nLeftSpeed = m_cDifferentialDriveSystem.GetLeftVelocity();
+               int16_t nRightSpeed = m_cDifferentialDriveSystem.GetRightVelocity();
+               uint8_t punTxData[] {
+                  reinterpret_cast<uint8_t*>(&nLeftSpeed)[1],
+                  reinterpret_cast<uint8_t*>(&nLeftSpeed)[0],
+                  reinterpret_cast<uint8_t*>(&nRightSpeed)[1],
+                  reinterpret_cast<uint8_t*>(&nRightSpeed)[0],
+               };
                m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_DDS_SPEED,
                                                     punTxData,
-                                                    2);
+                                                    sizeof(punTxData));
             }
             break;
          case CPacketControlInterface::CPacket::EType::GET_UPTIME:
             if(cPacket.GetDataLength() == 0) {
-               /* timer not implemented to improve interrupt latency for PID controller */
+               /* timer not implemented to improve interrupt latency for the shaft encoders */
                uint8_t punTxData[] = {0, 0, 0, 0};
                m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::GET_UPTIME,
                                                     punTxData,
@@ -104,6 +112,69 @@ void Firmware::Exec() {
             /* unknown command */
             break;
          }
+      }
+      /* Upload data */
+      if(m_bNewData) {
+         /* block interrupts */
+         uint8_t unSREG = SREG;
+         cli();
+         /* copy data */
+         int16_t m_nLeftTargetCpy = m_nLeftTarget;
+         int16_t m_nLeftErrorCpy = m_nLeftError;
+         int16_t nLeftErrorDerivativeCpy = nLeftErrorDerivative;
+         float m_fLeftErrorIntegralCpy = m_fLeftErrorIntegral;
+         float fLeftOutputCpy = fLeftOutput;
+         uint8_t unLeftDutyCycleCpy = unLeftDutyCycle;
+         int16_t m_nRightTargetCpy = m_nRightTarget;
+         int16_t m_nRightErrorCpy = m_nRightError;
+         int16_t nRightErrorDerivativeCpy = nRightErrorDerivative;
+         float m_fRightErrorIntegralCpy = m_fRightErrorIntegral;
+         float fRightOutputCpy = fRightOutput;
+         uint8_t unRightDutyCycleCpy = unRightDutyCycle;
+         m_bNewData = false;
+         /* restore interrupts */
+         SREG = unSREG;
+         /* tx the data */
+         uint32_t Marker = 0xABCDEFFF;
+         uint8_t punTxData[] = {
+            reinterpret_cast<uint8_t*>(&Marker)[0],
+            reinterpret_cast<uint8_t*>(&Marker)[1],
+            reinterpret_cast<uint8_t*>(&Marker)[2],
+            reinterpret_cast<uint8_t*>(&Marker)[3],
+            reinterpret_cast<uint8_t*>(&m_nLeftTargetCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_nLeftTargetCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_nLeftErrorCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_nLeftErrorCpy)[1],
+            reinterpret_cast<uint8_t*>(&nLeftErrorDerivativeCpy)[0],
+            reinterpret_cast<uint8_t*>(&nLeftErrorDerivativeCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[2],
+            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[3],
+            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[0],
+            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[1],
+            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[2],
+            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[3],
+            unLeftDutyCycleCpy,
+            reinterpret_cast<uint8_t*>(&m_nRightTargetCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_nRightTargetCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_nRightErrorCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_nRightErrorCpy)[1],
+            reinterpret_cast<uint8_t*>(&nRightErrorDerivativeCpy)[0],
+            reinterpret_cast<uint8_t*>(&nRightErrorDerivativeCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[0],
+            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[1],
+            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[2],
+            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[3],
+            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[0],
+            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[1],
+            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[2],
+            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[3],
+            unRightDutyCycleCpy
+         };
+         m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::INVALID,
+                                              punTxData,
+                                              sizeof(punTxData));
       }
    }
 }

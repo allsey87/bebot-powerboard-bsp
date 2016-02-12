@@ -4,7 +4,7 @@
 #include <huart_controller.h>
 
 #define RX_COMMAND_BUFFER_LENGTH 32
-#define TX_COMMAND_BUFFER_LENGTH 32
+#define TX_COMMAND_BUFFER_LENGTH 45
 
 #define PREAMBLE1  0xF0
 #define PREAMBLE2  0xCA
