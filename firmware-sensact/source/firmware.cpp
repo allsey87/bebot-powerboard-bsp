@@ -113,69 +113,6 @@ void CFirmware::Exec() {
             break;
          }
       }
-      /* Upload data */
-      if(m_bNewData) {
-         /* block interrupts */
-         uint8_t unSREG = SREG;
-         cli();
-         /* copy data */
-         int16_t m_nLeftTargetCpy = m_nLeftTarget;
-         int16_t m_nLeftErrorCpy = m_nLeftError;
-         int16_t nLeftErrorDerivativeCpy = nLeftErrorDerivative;
-         float m_fLeftErrorIntegralCpy = m_fLeftErrorIntegral;
-         float fLeftOutputCpy = fLeftOutput;
-         uint8_t unLeftDutyCycleCpy = unLeftDutyCycle;
-         int16_t m_nRightTargetCpy = m_nRightTarget;
-         int16_t m_nRightErrorCpy = m_nRightError;
-         int16_t nRightErrorDerivativeCpy = nRightErrorDerivative;
-         float m_fRightErrorIntegralCpy = m_fRightErrorIntegral;
-         float fRightOutputCpy = fRightOutput;
-         uint8_t unRightDutyCycleCpy = unRightDutyCycle;
-         m_bNewData = false;
-         /* restore interrupts */
-         SREG = unSREG;
-         /* tx the data */
-         uint32_t Marker = 0xABCDEFFF;
-         uint8_t punTxData[] = {
-            reinterpret_cast<uint8_t*>(&Marker)[0],
-            reinterpret_cast<uint8_t*>(&Marker)[1],
-            reinterpret_cast<uint8_t*>(&Marker)[2],
-            reinterpret_cast<uint8_t*>(&Marker)[3],
-            reinterpret_cast<uint8_t*>(&m_nLeftTargetCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_nLeftTargetCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_nLeftErrorCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_nLeftErrorCpy)[1],
-            reinterpret_cast<uint8_t*>(&nLeftErrorDerivativeCpy)[0],
-            reinterpret_cast<uint8_t*>(&nLeftErrorDerivativeCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[2],
-            reinterpret_cast<uint8_t*>(&m_fLeftErrorIntegralCpy)[3],
-            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[0],
-            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[1],
-            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[2],
-            reinterpret_cast<uint8_t*>(&fLeftOutputCpy)[3],
-            unLeftDutyCycleCpy,
-            reinterpret_cast<uint8_t*>(&m_nRightTargetCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_nRightTargetCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_nRightErrorCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_nRightErrorCpy)[1],
-            reinterpret_cast<uint8_t*>(&nRightErrorDerivativeCpy)[0],
-            reinterpret_cast<uint8_t*>(&nRightErrorDerivativeCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[0],
-            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[1],
-            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[2],
-            reinterpret_cast<uint8_t*>(&m_fRightErrorIntegralCpy)[3],
-            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[0],
-            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[1],
-            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[2],
-            reinterpret_cast<uint8_t*>(&fRightOutputCpy)[3],
-            unRightDutyCycleCpy
-         };
-         m_cPacketControlInterface.SendPacket(CPacketControlInterface::CPacket::EType::INVALID,
-                                              punTxData,
-                                              sizeof(punTxData));
-      }
    }
 }
 

@@ -66,21 +66,6 @@ private:
 public: // TODO, don't make these public
     /* File structs for fprintf */
    FILE* m_psHUART;
-
-   volatile int16_t m_nLeftTarget;
-   volatile int16_t m_nLeftError;
-   volatile int16_t nLeftErrorDerivative;
-   volatile float m_fLeftErrorIntegral;
-   volatile float fLeftOutput;
-   volatile uint8_t unLeftDutyCycle;
-   volatile int16_t m_nRightTarget;
-   volatile int16_t m_nRightError;
-   volatile int16_t nRightErrorDerivative;
-   volatile float m_fRightErrorIntegral;
-   volatile float fRightOutput;
-   volatile uint8_t unRightDutyCycle;
-
-   volatile bool m_bNewData = false;
 };
 
 #endif

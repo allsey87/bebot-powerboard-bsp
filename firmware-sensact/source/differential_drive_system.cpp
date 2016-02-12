@@ -414,23 +414,6 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    /* clear the step counters */
    m_pcDifferentialDriveSystem->m_nRightSteps = 0;
    m_pcDifferentialDriveSystem->m_nLeftSteps = 0;
-
-   /* Debug */
-   CFirmware::GetInstance().m_nLeftTarget = m_nLeftTarget;
-   CFirmware::GetInstance().m_nLeftError = nLeftError;
-   CFirmware::GetInstance().nLeftErrorDerivative = nLeftErrorDerivative;
-   CFirmware::GetInstance().m_fLeftErrorIntegral = m_fLeftErrorIntegral;
-   CFirmware::GetInstance().fLeftOutput = fLeftOutput;
-   CFirmware::GetInstance().unLeftDutyCycle = unLeftDutyCycle;
-
-   CFirmware::GetInstance().m_nRightTarget = m_nRightTarget;
-   CFirmware::GetInstance().m_nRightError = nRightError;
-   CFirmware::GetInstance().nRightErrorDerivative = nRightErrorDerivative;
-   CFirmware::GetInstance().m_fRightErrorIntegral = m_fRightErrorIntegral;
-   CFirmware::GetInstance().fRightOutput = fRightOutput;
-   CFirmware::GetInstance().unRightDutyCycle = unRightDutyCycle;
-   
-   CFirmware::GetInstance().m_bNewData = true;
 }
 
 /****************************************/
