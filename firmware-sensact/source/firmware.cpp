@@ -36,6 +36,9 @@ int main(void)
 void CFirmware::Exec() {
    m_cAccelerometerSystem.Init();
 
+   //m_cDifferentialDriveSystem.Enable();
+   //m_cDifferentialDriveSystem.SetTargetVelocity(-100, 100);
+
    for(;;) {
       m_cPacketControlInterface.ProcessInput();
 

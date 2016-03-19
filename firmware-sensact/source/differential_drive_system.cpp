@@ -27,7 +27,7 @@
 
 CDifferentialDriveSystem::CDifferentialDriveSystem() :
    m_cShaftEncodersInterrupt(this, PCINT1_vect_num),
-   m_cPIDControlStepInterrupt(this, TIMER1_OVF_vect_num),
+   m_cPIDControlStepInterrupt(this, TIMER1_COMPA_vect_num),
    m_nLeftSteps(0),
    m_nRightSteps(0) {
 
@@ -51,7 +51,7 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
    /* Setup up timer 0 for PWM */
    /* Select phase correct, non-inverting PWM mode on channel A & B */
    TCCR0A |= (1 << WGM00);
-   /* Set precaler to 256, TOP = 256 (approximately 122.070Hz output frequency) */
+   /* Set precaler to 256 (approximately 61.275Hz output frequency) */
    TCCR0B |= (1 << CS02);
 
    /* Initialize left and right motor duty cycle to zero */
@@ -59,8 +59,18 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
    OCR0B = 0;
 
    /* Setup up timer 1 for control loop */
-   /* Set precaler to 8, TOP = 65536 (15.259Hz update frequency) */
-   TCCR1B |= (1 << CS11);
+   /* Set precaler to 8, TOP = 65535 (15.259Hz update frequency) */
+   //TCCR1B |= (1 << CS11);
+
+   /* CTC Mode , with precaler set to 64, OCR1A = 12499 (10Hz update frequency) */
+   TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
+   OCR1A = 6249; // 20Hz
+   //OCR1A = 12499;
+
+   /* CTC Mode , with precaler set to 64, OCR1A = 24999 (5Hz update frequency) */
+   //TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
+   //OCR1A = 24999;
+
    
    /* Enable port change interrupts for right encoder A/B
       and left encoder A/B respectively */
@@ -329,7 +339,7 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::Enable() {
    m_nRightLastError = 0;
    m_fRightErrorIntegral = 0.0f;
    /* enable interrupt */
-   TIMSK1 |= (1 << TOIE1);
+   TIMSK1 |= (1 << OCIE1A);
 }
 
 /****************************************/
@@ -337,7 +347,7 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::Enable() {
 
 void CDifferentialDriveSystem::CPIDControlStepInterrupt::Disable() {
    /* disable interrupt */
-   TIMSK1 &= ~(1 << TOIE1);
+   TIMSK1 &= ~(1 << OCIE1A);
 }
 
 /****************************************/
@@ -369,7 +379,7 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
       (m_fKi * m_fLeftErrorIntegral) +
       (m_fKd * nLeftErrorDerivative);
    /* store the sign of the output */
-   bool bLeftNegative = (fLeftOutput < 0);
+   bool bLeftNegative = (fLeftOutput < 0.0f);
    /* take the absolute value */
    fLeftOutput = (bLeftNegative ? -fLeftOutput : fLeftOutput);
    /* saturate into the uint8_t range */
@@ -391,22 +401,33 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
       (m_fKi * m_fRightErrorIntegral) +
       (m_fKd * nRightErrorDerivative);
    /* store the sign of the output */
-   bool bRightNegative = (fRightOutput < 0);
+   bool bRightNegative = (fRightOutput < 0.0f);
    /* take the absolute value */
    fRightOutput = (bRightNegative ? -fRightOutput : fRightOutput);
    /* saturate into the uint8_t range */
    uint8_t unRightDutyCycle = (fRightOutput < float(UINT8_MAX)) ? uint8_t(fRightOutput) : UINT8_MAX;
 
    /* Update right motor */
-   m_pcDifferentialDriveSystem->ConfigureRightMotor(
-      bRightNegative ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
-                       CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
-      unRightDutyCycle);
-   
-   m_pcDifferentialDriveSystem->ConfigureLeftMotor(
-      bLeftNegative  ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
-                       CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
-      unLeftDutyCycle);
+   if(((m_nRightTarget < 0) && bRightNegative) || ((m_nRightTarget >= 0) && !bRightNegative)) {
+      m_pcDifferentialDriveSystem->ConfigureRightMotor(
+         bRightNegative ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
+                          CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
+         unRightDutyCycle);
+   }
+   else {
+       m_pcDifferentialDriveSystem->ConfigureRightMotor(CDifferentialDriveSystem::EBridgeMode::COAST);
+   }
+
+   /* Update left motor */
+   if(((m_nLeftTarget < 0) && bLeftNegative) || ((m_nLeftTarget >= 0) && !bLeftNegative)) {
+      m_pcDifferentialDriveSystem->ConfigureLeftMotor(
+         bLeftNegative  ? CDifferentialDriveSystem::EBridgeMode::REVERSE_PWM_FD :
+                          CDifferentialDriveSystem::EBridgeMode::FORWARD_PWM_FD,
+         unLeftDutyCycle);
+   }
+   else {
+      m_pcDifferentialDriveSystem->ConfigureLeftMotor(CDifferentialDriveSystem::EBridgeMode::COAST);
+   }
 
    /* copy the step counters for velocity measurements */
    m_pcDifferentialDriveSystem->m_nRightStepsOut = m_pcDifferentialDriveSystem->m_nRightSteps;
