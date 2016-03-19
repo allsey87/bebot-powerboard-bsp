@@ -347,6 +347,12 @@ void CPowerManagementSystem::Update() {
    if(m_cSystemPowerManager.GetBatteryState() != CBQ24161Module::EBatteryState::NORMAL ||
       m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_FAULT ||
       m_cSystemPowerManager.GetFault() == CBQ24161Module::EFault::BATT_THERMAL_SHDN) {
+      /* Sometimes a fault is caused by the remote PMIC losing it's configuration */
+      /* resend the configuration if this is the case */
+      m_cSystemPowerManager.SetBatteryRegulationVoltage(SYS_BATT_REG_VOLTAGE);
+      m_cSystemPowerManager.SetBatteryChargingCurrent(SYS_BATT_CHG_CURRENT);
+      m_cSystemPowerManager.SetBatteryTerminationCurrent(SYS_BATT_TRM_CURRENT);
+   
       /* If we are charging, disable it */
       if(m_cSystemPowerManager.GetDeviceState() == CBQ24161Module::EDeviceState::CHARGING) {
          m_cSystemPowerManager.SetChargingEnable(false);
