@@ -58,19 +58,9 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
    OCR0A = 0;
    OCR0B = 0;
 
-   /* Setup up timer 1 for control loop */
-   /* Set precaler to 8, TOP = 65535 (15.259Hz update frequency) */
-   //TCCR1B |= (1 << CS11);
-
-   /* CTC Mode , with precaler set to 64, OCR1A = 12499 (10Hz update frequency) */
+   /* CTC Mode , with precaler set to 64, OCR1A = 2039 (61.275Hz update frequency - same as PWM) */
    TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
-   OCR1A = 6249; // 20Hz
-   //OCR1A = 12499;
-
-   /* CTC Mode , with precaler set to 64, OCR1A = 24999 (5Hz update frequency) */
-   //TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
-   //OCR1A = 24999;
-
+   OCR1A = 2039;
    
    /* Enable port change interrupts for right encoder A/B
       and left encoder A/B respectively */
@@ -83,7 +73,6 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
 
 void CDifferentialDriveSystem::SetTargetVelocity(int16_t n_left_speed, int16_t n_right_speed) {
    m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_speed, n_right_speed);
-   
 }
 
 /****************************************/
@@ -323,9 +312,9 @@ CDifferentialDriveSystem::CPIDControlStepInterrupt::CPIDControlStepInterrupt(
    m_nRightTarget(0),
    m_nRightLastError(0),
    m_fRightErrorIntegral(0.0f),
-   m_fKp(0.025f),
-   m_fKi(0.200f),
-   m_fKd(0.025f) {
+   m_fKp(0.005f),
+   m_fKi(0.150f),
+   m_fKd(0.005f) {
    Register(this, un_intr_vect_num);
 }
 
@@ -365,9 +354,6 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::SetTargetVelocity(int16
 void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    /* Calculate left PID intermediates */
    int16_t nLeftError = m_nLeftTarget - m_pcDifferentialDriveSystem->m_nLeftSteps;
-   
-   nLeftError = (nLeftError < 0) ? (nLeftError < -64 ? -64 : nLeftError) : (nLeftError > 64 ? 64 : nLeftError);
-   
    /* Accumulate the integral component */
    m_fLeftErrorIntegral += nLeftError;
    /* Calculate the derivate component */
@@ -384,12 +370,8 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::ServiceRoutine() {
    fLeftOutput = (bLeftNegative ? -fLeftOutput : fLeftOutput);
    /* saturate into the uint8_t range */
    uint8_t unLeftDutyCycle = (fLeftOutput < float(UINT8_MAX)) ? uint8_t(fLeftOutput) : UINT8_MAX;
-
    /* Calculate right PID intermediates */
    int16_t nRightError = m_nRightTarget - m_pcDifferentialDriveSystem->m_nRightSteps;
-   
-   nRightError = (nRightError < 0) ? (nRightError < -64 ? -64 : nRightError) : (nRightError > 64 ? 64 : nRightError);
-      
    /* Accumulate the integral component */
    m_fRightErrorIntegral += nRightError;
    /* Calculate the derivate component */
