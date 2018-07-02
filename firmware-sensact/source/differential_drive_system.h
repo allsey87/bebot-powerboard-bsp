@@ -8,7 +8,8 @@ class CDifferentialDriveSystem {
 public:
    CDifferentialDriveSystem();
 
-   void SetTargetVelocity(int16_t n_left_speed, int16_t n_right_speed);
+   void SetLeftTargetVelocity(int16_t n_velocity);
+   void SetRightTargetVelocity(int16_t n_velocity);
    
    int16_t GetLeftVelocity();
    int16_t GetRightVelocity();
@@ -51,7 +52,8 @@ public:
                                uint8_t un_intr_vect_num);
       void Enable();
       void Disable();
-      void SetTargetVelocity(int16_t n_left_speed, int16_t n_right_speed);
+      void SetLeftTargetVelocity(int16_t n_velocity);
+      void SetRightTargetVelocity(int16_t n_velocity);
    private:
       void ServiceRoutine();
    private:   
@@ -59,13 +61,14 @@ public:
 
       int16_t m_nLeftTarget;
       int16_t m_nLeftLastError;
-      float m_fLeftErrorIntegral;
+      int32_t m_nLeftErrorIntegral;
       int16_t m_nRightTarget;
       int16_t m_nRightLastError;
-      float m_fRightErrorIntegral;
+      int32_t m_nRightErrorIntegral;
       const float m_fKp;
       const float m_fKi;
       const float m_fKd;     
+      const int32_t m_nIntegralLimit;
    } m_cPIDControlStepInterrupt;
 
    friend CShaftEncodersInterrupt;
