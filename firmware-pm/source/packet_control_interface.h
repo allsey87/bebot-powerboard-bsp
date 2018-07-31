@@ -60,6 +60,7 @@ public:
          /* Power Management Microcontroller  */
          /*************************************/
          /* Switches */
+         SET_SYSTEM_POWER_ENABLE = 0x39,
          SET_ACTUATOR_POWER_ENABLE = 0x40,
          SET_ACTUATOR_INPUT_LIMIT_OVERRIDE = 0x41,
          SET_USBIF_ENABLE = 0x42,

@@ -260,6 +260,13 @@ void CFirmware::Exec()
                                                     sizeof(punTxData));
             }
             break;
+         case CPacketControlInterface::CPacket::EType::SET_SYSTEM_POWER_ENABLE:
+            /* Set the enable signal for the actuator power supply */
+            if(cPacket.GetDataLength() == 1) {
+               const uint8_t* punRxData = cPacket.GetDataPointer();
+               m_cPowerManagementSystem.SetSystemPowerOn((punRxData[0] != 0) ? true : false);
+            }
+            break;
          case CPacketControlInterface::CPacket::EType::SET_ACTUATOR_POWER_ENABLE:
             /* Set the enable signal for the actuator power supply */
             if(cPacket.GetDataLength() == 1) {

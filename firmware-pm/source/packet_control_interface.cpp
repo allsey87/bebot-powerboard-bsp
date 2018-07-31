@@ -11,6 +11,9 @@ CPacketControlInterface::CPacket::EType CPacketControlInterface::CPacket::GetTyp
    case 0x01:
       return EType::GET_BATT_LVL;
       break;
+   case 0x39:
+      return EType::SET_SYSTEM_POWER_ENABLE;
+      break;
    case 0x40:
       return EType::SET_ACTUATOR_POWER_ENABLE;
       break;
