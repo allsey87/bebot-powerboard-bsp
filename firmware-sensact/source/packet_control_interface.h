@@ -49,8 +49,7 @@ public:
          /*************************************/
          /* Differential Drive System Packets */
          SET_DDS_ENABLE = 0x10,
-         SET_DDS_SPEED_LEFT = 0x11,
-         SET_DDS_SPEED_RIGHT = 0x12,
+         SET_DDS_SPEED = 0x11,
          GET_DDS_SPEED  = 0x13,
          SET_DDS_PARAMS = 0x14,
          GET_DDS_PARAMS = 0x15,
@@ -133,7 +132,7 @@ public:
    void Reset();
 
    void SendPacket(CPacket::EType e_type,
-                   uint8_t* pun_tx_data = NULL,
+                   const uint8_t* pun_tx_data = NULL,
                    uint8_t un_tx_data_length = 0);
       
 private:

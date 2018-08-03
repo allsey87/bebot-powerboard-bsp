@@ -12,10 +12,7 @@ CPacketControlInterface::CPacket::EType CPacketControlInterface::CPacket::GetTyp
       return EType::SET_DDS_ENABLE;
       break;
    case 0x11:
-      return EType::SET_DDS_SPEED_LEFT;
-      break;
-   case 0x12:
-      return EType::SET_DDS_SPEED_RIGHT;
+      return EType::SET_DDS_SPEED;
       break;
    case 0x13:
       return EType::GET_DDS_SPEED;
@@ -50,7 +47,7 @@ CPacketControlInterface::EState CPacketControlInterface::GetState() const {
 
 
 void CPacketControlInterface::SendPacket(CPacket::EType e_type,
-                                         uint8_t* pun_tx_data,
+                                         const uint8_t* pun_tx_data,
                                          uint8_t un_tx_data_length) {
 
    uint8_t punTxBuffer[TX_COMMAND_BUFFER_LENGTH];

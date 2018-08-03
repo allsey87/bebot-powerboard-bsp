@@ -71,15 +71,8 @@ CDifferentialDriveSystem::CDifferentialDriveSystem() :
 /****************************************/
 /****************************************/
 
-void CDifferentialDriveSystem::SetLeftTargetVelocity(int16_t n_velocity) {
-   m_cPIDControlStepInterrupt.SetLeftTargetVelocity(n_velocity);
-}
-
-/****************************************/
-/****************************************/
-
-void CDifferentialDriveSystem::SetRightTargetVelocity(int16_t n_velocity) {
-   m_cPIDControlStepInterrupt.SetRightTargetVelocity(n_velocity);
+void CDifferentialDriveSystem::SetTargetVelocity(int16_t n_left_velocity, int16_t n_right_velocity) {
+   m_cPIDControlStepInterrupt.SetTargetVelocity(n_left_velocity, n_right_velocity);
 }
 
 /****************************************/
@@ -335,6 +328,8 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::Enable() {
    m_nLeftErrorIntegral = 0;
    m_nRightLastError = 0;
    m_nRightErrorIntegral = 0;
+   m_nLeftTarget = 0;
+   m_nRightTarget = 0;
    /* enable interrupt */
    TIMSK1 |= (1 << OCIE1A);
 }
@@ -350,20 +345,11 @@ void CDifferentialDriveSystem::CPIDControlStepInterrupt::Disable() {
 /****************************************/
 /****************************************/
 
-void CDifferentialDriveSystem::CPIDControlStepInterrupt::SetLeftTargetVelocity(int16_t n_velocity) {
+void CDifferentialDriveSystem::CPIDControlStepInterrupt::SetTargetVelocity(int16_t n_left_velocity, int16_t n_right_velocity) {
    uint8_t unSREG = SREG;
    cli();
-   m_nLeftTarget = n_velocity;
-   SREG = unSREG;
-}
-
-/****************************************/
-/****************************************/
-
-void CDifferentialDriveSystem::CPIDControlStepInterrupt::SetRightTargetVelocity(int16_t n_velocity) {
-   uint8_t unSREG = SREG;
-   cli();
-   m_nRightTarget = n_velocity;
+   m_nLeftTarget = n_left_velocity;
+   m_nRightTarget = n_right_velocity;
    SREG = unSREG;
 }
 

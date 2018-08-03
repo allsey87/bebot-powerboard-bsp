@@ -8,8 +8,7 @@ class CDifferentialDriveSystem {
 public:
    CDifferentialDriveSystem();
 
-   void SetLeftTargetVelocity(int16_t n_velocity);
-   void SetRightTargetVelocity(int16_t n_velocity);
+   void SetTargetVelocity(int16_t n_left_velocity, int16_t n_right_velocity);
    
    int16_t GetLeftVelocity();
    int16_t GetRightVelocity();
@@ -52,8 +51,7 @@ public:
                                uint8_t un_intr_vect_num);
       void Enable();
       void Disable();
-      void SetLeftTargetVelocity(int16_t n_velocity);
-      void SetRightTargetVelocity(int16_t n_velocity);
+      void SetTargetVelocity(int16_t n_left_velocity, int16_t n_right_velocity);
    private:
       void ServiceRoutine();
    private:   
