@@ -1,9 +1,22 @@
-bebot-powerboard-bsp
-====================
+Firmware and Bootloader for the BuilderBot Powerboard
+==============
 
-This repository contains the source for the two firmware images on the bebot-powerboard-bsp. The bebot-powerboard-bsp is a dual ATMega328P design, with one microcontroller responsible for power management and charging (always on), and a second microcontroller for sensing and actuating the base.
+This repository contains the firmware and bootloader for the BuilderBot powerboard. The power board contains two microcontrollers, one for managing power (firmware-pm) and one for managing the sensors and actuators (firmware-sensact). The code uses AVR Libc and is based on the Arduino AVR core libraries. In many cases, the Arduino libraries have been significantly modified and only some parts of the code base still resemble the [original code](https://github.com/arduino/ArduinoCore-avr).
 
-##LED Definitions for the PM Firmware##
+## Useful commands
+1. Upload the bootloader
+```bash
+avrdude -c buspirate -p m328p -P /dev/ttyUSBX -U lock:w:0x3F:m -U lfuse:w:0xFF:m -U hfuse:w:0xDE:m -U efuse:w:0x05:m -U flash:w:optiboot_atmega328.hex -U lock:w:0x0F:m
+```
+
+2. Upload the firmware
+```bash
+avrdude -c arduino -p m328p -P /dev/ttyUSBX -b 57600 -U flash:w:firmware.hex
+```
+
+## Status LEDs
+
+The following table summarizes the meaning of the LEDs on the BuilderBot powerboard.
 
 | Battery LED | Charge LED | Meaning |
 |-------------|------------|---------|
