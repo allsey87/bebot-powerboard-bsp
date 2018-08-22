@@ -1,7 +1,7 @@
-Firmware and Bootloader for the BuilderBot Powerboard
+Firmware and Bootloader for the BuilderBot
 ==============
 
-This repository contains the firmware and bootloader for the BuilderBot powerboard. The power board contains two microcontrollers, one for managing power (firmware-pm) and one for managing the sensors and actuators (firmware-sensact). The code uses AVR Libc and is based on the Arduino AVR core libraries. In many cases, the Arduino libraries have been significantly modified and only some parts of the code base still resemble the [original code](https://github.com/arduino/ArduinoCore-avr).
+This repository contains the firmware and bootloader for the BuilderBot. The power board contains two microcontrollers, one for managing power (firmware-pm) and one for managing the sensors and actuators (firmware-sensact). In addition, there is a third microcontroller for controlling the manipulator (firmware-manip). This code uses AVR Libc and is based on the Arduino AVR core libraries. In many cases, the Arduino libraries have been significantly modified and only some parts of the code base still resemble the [original code](https://github.com/arduino/ArduinoCore-avr).
 
 ## Useful commands
 1. Upload the bootloader
