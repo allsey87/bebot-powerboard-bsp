@@ -198,7 +198,6 @@ void CPacketControlInterface::SendPacket(CPacket::EType e_type,
 void CPacketControlInterface::Reset() {
    m_unRxBufferPointer = 0;
    m_unUsedBufferLength = 0;
-   m_unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
    m_eState = EState::SRCH_PREAMBLE1;
 }
 
@@ -207,16 +206,17 @@ void CPacketControlInterface::Reset() {
 
 void CPacketControlInterface::AdjustBuffer() {
    /* search for the beginning of a new packet */
-   for(m_unReparseOffset = 1; m_unReparseOffset < m_unUsedBufferLength; m_unReparseOffset++)
-      if(m_punRxBuffer[m_unReparseOffset] == PREAMBLE1)
+   uint8_t unReparseOffset = 1;
+   for(; unReparseOffset < m_unUsedBufferLength; unReparseOffset++)
+      if(m_punRxBuffer[unReparseOffset] == PREAMBLE1)
          break;
-   /* shift the buffer so that the new packet is at the beginning of the buffer */
-   for(uint8_t unBufferIdx = m_unReparseOffset;
+   /* shift the data so that the new packet is at the beginning of the buffer */
+   for(uint8_t unBufferIdx = unReparseOffset;
        unBufferIdx < m_unUsedBufferLength;
        unBufferIdx++)
-      m_punRxBuffer[unBufferIdx - m_unReparseOffset] = m_punRxBuffer[unBufferIdx];
+      m_punRxBuffer[unBufferIdx - unReparseOffset] = m_punRxBuffer[unBufferIdx];
    /* reset the state machine */
-   m_unUsedBufferLength -= m_unReparseOffset;
+   m_unUsedBufferLength -= unReparseOffset;
    m_unRxBufferPointer = 0;
    m_eState = EState::SRCH_PREAMBLE1;
 }
@@ -239,8 +239,6 @@ void CPacketControlInterface::ReceiveFrame(uint8_t *pun_data, uint8_t un_length)
 
 void CPacketControlInterface::ProcessInput() {
    uint8_t unRxByte = 0;
-   uint8_t m_unReparseOffset = RX_COMMAND_BUFFER_LENGTH;
-
    if(m_eState == EState::RECV_COMMAND) {
       /* we received a command in the last invocation, prepare for the next one */
       AdjustBuffer();
