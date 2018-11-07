@@ -49,10 +49,10 @@ public:
          /*************************************/
          /* Differential Drive System Packets */
          SET_DDS_ENABLE = 0x10,
-         SET_DDS_SPEED  = 0x11,
-         GET_DDS_SPEED  = 0x12,
-         SET_DDS_PARAMS = 0x13,
-         GET_DDS_PARAMS = 0x14,
+         SET_DDS_SPEED = 0x11,
+         GET_DDS_SPEED  = 0x13,
+         SET_DDS_PARAMS = 0x14,
+         GET_DDS_PARAMS = 0x15,
          /* Accelerometer System Packets */
          GET_ACCEL_READING = 0x20,
 
@@ -60,6 +60,7 @@ public:
          /* Power Management Microcontroller  */
          /*************************************/
          /* Switches */
+         SET_SYSTEM_POWER_ENABLE = 0x39,
          SET_ACTUATOR_POWER_ENABLE = 0x40,
          SET_ACTUATOR_INPUT_LIMIT_OVERRIDE = 0x41,
          SET_USBIF_ENABLE = 0x42,
@@ -91,15 +92,15 @@ public:
          READ_NFC = 0xA0,
          WRITE_NFC = 0xA1,
          /* Remote I2C control */
-	      READ_SMBUS_BYTE = 0xC0,
-	      READ_SMBUS_BYTE_DATA = 0xC1,
-	      READ_SMBUS_WORD_DATA = 0xC2,
-	      READ_SMBUS_BLOCK_DATA = 0xC3,
+         READ_SMBUS_BYTE = 0xC0,
+         READ_SMBUS_BYTE_DATA = 0xC1,
+         READ_SMBUS_WORD_DATA = 0xC2,
+         READ_SMBUS_BLOCK_DATA = 0xC3,
          READ_SMBUS_I2C_BLOCK_DATA = 0xC4,
-	      WRITE_SMBUS_BYTE = 0xD0,
-	      WRITE_SMBUS_BYTE_DATA = 0xD1,
-	      WRITE_SMBUS_WORD_DATA = 0xD2,
-	      WRITE_SMBUS_BLOCK_DATA = 0xD3,
+         WRITE_SMBUS_BYTE = 0xD0,
+         WRITE_SMBUS_BYTE_DATA = 0xD1,
+         WRITE_SMBUS_WORD_DATA = 0xD2,
+         WRITE_SMBUS_BLOCK_DATA = 0xD3,
          WRITE_SMBUS_I2C_BLOCK_DATA = 0xD4,
          /*************************************/
          /* Invalid value for conversions     */
@@ -160,10 +161,10 @@ public:
       SendPacket(e_type, nullptr, 0);                
    }
 
-
-      
 private:
    uint8_t ComputeChecksum(uint8_t* pun_buf_data, uint8_t un_buf_length);
+   void AdjustBuffer();
+   void ReceiveFrame(uint8_t *pun_data, uint8_t un_length);
 
    EState m_eState;
 
@@ -175,8 +176,6 @@ private:
    CPacket m_cPacket;
 
    CHUARTController& m_cController;
-   
-
 };
    
 #endif

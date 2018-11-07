@@ -4,7 +4,7 @@
 #include <huart_controller.h>
 
 #define RX_COMMAND_BUFFER_LENGTH 32
-#define TX_COMMAND_BUFFER_LENGTH 45
+#define TX_COMMAND_BUFFER_LENGTH 32
 
 #define PREAMBLE1  0xF0
 #define PREAMBLE2  0xCA
@@ -60,6 +60,7 @@ public:
          /* Power Management Microcontroller  */
          /*************************************/
          /* Switches */
+         SET_SYSTEM_POWER_ENABLE = 0x39,
          SET_ACTUATOR_POWER_ENABLE = 0x40,
          SET_ACTUATOR_INPUT_LIMIT_OVERRIDE = 0x41,
          SET_USBIF_ENABLE = 0x42,
@@ -73,8 +74,13 @@ public:
          /*************************************/
          GET_CHARGER_STATUS = 0x60,
          /* Lift Actuator System */
-         SET_LIFT_ACTUATOR_SPEED = 0x71,
-         GET_LIMIT_SWITCH_STATE = 0x72,
+         SET_LIFT_ACTUATOR_POSITION = 0x70,
+         GET_LIFT_ACTUATOR_POSITION = 0x71,
+         SET_LIFT_ACTUATOR_SPEED = 0x72,
+         GET_LIMIT_SWITCH_STATE = 0x73,
+         CALIBRATE_LIFT_ACTUATOR = 0x74,
+         EMER_STOP_LIFT_ACTUATOR = 0x75,
+         GET_LIFT_ACTUATOR_STATE = 0x76,
          /* Electromagnet Subsystem */
          SET_EM_CHARGE_ENABLE = 0x80,
          SET_EM_DISCHARGE_MODE = 0x81,
@@ -83,8 +89,19 @@ public:
          GET_RF_RANGE = 0x90,
          GET_RF_AMBIENT = 0x91,
          /* NFC Control */
-         SEND_NFC_MESSAGE = 0xA0,
-         
+         READ_NFC = 0xA0,
+         WRITE_NFC = 0xA1,
+         /* Remote I2C control */
+         READ_SMBUS_BYTE = 0xC0,
+         READ_SMBUS_BYTE_DATA = 0xC1,
+         READ_SMBUS_WORD_DATA = 0xC2,
+         READ_SMBUS_BLOCK_DATA = 0xC3,
+         READ_SMBUS_I2C_BLOCK_DATA = 0xC4,
+         WRITE_SMBUS_BYTE = 0xD0,
+         WRITE_SMBUS_BYTE_DATA = 0xD1,
+         WRITE_SMBUS_WORD_DATA = 0xD2,
+         WRITE_SMBUS_BLOCK_DATA = 0xD3,
+         WRITE_SMBUS_I2C_BLOCK_DATA = 0xD4,
          /*************************************/
          /* Invalid value for conversions     */
          /*************************************/
@@ -132,11 +149,22 @@ public:
    void Reset();
 
    void SendPacket(CPacket::EType e_type,
-                   const uint8_t* pun_tx_data = NULL,
-                   uint8_t un_tx_data_length = 0);
-      
+                   const uint8_t* pun_tx_data,
+                   uint8_t un_tx_data_length);
+                   
+   void SendPacket(CPacket::EType e_type,
+                   uint8_t un_tx_data) {
+      SendPacket(e_type, &un_tx_data, 1);                
+   }
+   
+   void SendPacket(CPacket::EType e_type) {
+      SendPacket(e_type, nullptr, 0);                
+   }
+
 private:
    uint8_t ComputeChecksum(uint8_t* pun_buf_data, uint8_t un_buf_length);
+   void AdjustBuffer();
+   void ReceiveFrame(uint8_t *pun_data, uint8_t un_length);
 
    EState m_eState;
 
@@ -148,8 +176,6 @@ private:
    CPacket m_cPacket;
 
    CHUARTController& m_cController;
-   
-
 };
    
 #endif
