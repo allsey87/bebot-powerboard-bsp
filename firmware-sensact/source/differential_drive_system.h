@@ -63,10 +63,11 @@ public:
       int16_t m_nRightTarget;
       int16_t m_nRightLastError;
       int32_t m_nRightErrorIntegral;
+      float m_fLeftOutput;
+      float m_fRightOutput;
       const float m_fKp;
       const float m_fKi;
       const float m_fKd;     
-      const int32_t m_nIntegralLimit;
    } m_cPIDControlStepInterrupt;
 
    friend CShaftEncodersInterrupt;
@@ -78,7 +79,6 @@ public:
    /* Cached step count variable */
    volatile int16_t m_nLeftStepsOut;
    volatile int16_t m_nRightStepsOut;
-
 };
 
 #endif
