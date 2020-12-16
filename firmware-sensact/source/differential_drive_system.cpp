@@ -319,7 +319,7 @@ CDifferentialDriveSystem::CPIDControlStepInterrupt::CPIDControlStepInterrupt(
    //m_fKi(0.00f),
    //m_fKd(0.35f) {
    /* arena */
-   m_fKp(1.00f),
+   m_fKp(1.20f),
    m_fKi(0.00f),
    m_fKd(0.25f) {
    Register(this, un_intr_vect_num);
